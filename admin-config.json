@@ -1,0 +1,21 @@
+{
+  "tabs": [
+    {
+      "id": "general",
+      "label": "General",
+      "fields": [
+        { "key": "debug_mode", "label": "Debug Mode", "component": "checkbox", "description": "Enable verbose logging for the VBWD Office plugin" },
+        {
+          "key": "default_view_mode",
+          "label": "Default View",
+          "component": "select",
+          "options": [
+            { "value": "list", "label": "List" },
+            { "value": "grid", "label": "Grid" }
+          ]
+        },
+        { "key": "max_upload_mb", "label": "Client Upload Warning (MB)", "component": "input", "inputType": "number", "min": 1, "max": 1024, "description": "Client-side warning threshold only — the server enforces the real cap" }
+      ]
+    }
+  ]
+}

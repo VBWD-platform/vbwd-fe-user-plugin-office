@@ -1,0 +1,197 @@
+{
+  "nav": {
+    "office": "VBWD Office"
+  },
+  "office": {
+    "title": "VBWD Space",
+    "root": "Meine Dateien",
+    "loading": "Wird geladen…",
+    "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "retry": "Erneut versuchen",
+    "empty": {
+      "title": "Dieser Ordner ist leer",
+      "hint": "Ziehen Sie Dateien hierher oder nutzen Sie Hochladen, um zu beginnen.",
+      "uploadCta": "Erste Datei hochladen"
+    },
+    "toolbar": {
+      "newFolder": "Neuer Ordner",
+      "newDoc": "Neues Dokument",
+      "newSheet": "Neue Tabelle",
+      "upload": "Hochladen",
+      "viewList": "Listenansicht",
+      "viewGrid": "Rasteransicht",
+      "search": "Diesen Ordner durchsuchen…",
+      "sharedWithMe": "Für mich freigegeben"
+    },
+    "newFolder": {
+      "title": "Neuer Ordner",
+      "placeholder": "Ordnername",
+      "create": "Erstellen",
+      "cancel": "Abbrechen"
+    },
+    "newDoc": {
+      "namePrompt": "Dokumentname"
+    },
+    "newSheet": {
+      "namePrompt": "Tabellenname"
+    },
+    "node": {
+      "folder": "Ordner",
+      "document": "Dokument",
+      "modified": "Geändert",
+      "size": "Größe"
+    },
+    "dropzone": {
+      "prompt": "Dateien zum Hochladen ablegen"
+    },
+    "upload": {
+      "uploading": "{name} wird hochgeladen…",
+      "done": "{name} hochgeladen",
+      "failed": "Hochladen von {name} fehlgeschlagen",
+      "cancel": "Abbrechen"
+    },
+    "contextMenu": {
+      "open": "Öffnen",
+      "share": "Teilen",
+      "rename": "Umbenennen",
+      "move": "Verschieben",
+      "download": "Herunterladen",
+      "versions": "Versionen",
+      "trash": "In den Papierkorb"
+    },
+    "rename": {
+      "title": "Umbenennen",
+      "placeholder": "Neuer Name",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "versions": {
+      "title": "Versionsverlauf",
+      "restore": "Wiederherstellen",
+      "current": "Aktuell",
+      "empty": "Noch keine früheren Versionen.",
+      "close": "Schließen"
+    },
+    "usage": {
+      "label": "Speicher belegt",
+      "of": "von"
+    },
+    "preview": {
+      "unavailable": "Für diesen Dateityp ist keine Vorschau verfügbar.",
+      "downloadInstead": "Zum Anzeigen herunterladen."
+    },
+    "share": {
+      "title": "\"{name}\" teilen",
+      "recipientLabel": "Mit einer Person teilen (optional)",
+      "recipientPlaceholder": "email@example.com",
+      "permissionLabel": "Berechtigung",
+      "permission": {
+        "view": "Ansehen",
+        "comment": "Kommentieren",
+        "edit": "Bearbeiten"
+      },
+      "anonymousLabel": "Jeder mit dem Link, keine Anmeldung erforderlich",
+      "anonymousHint": "Wenn Sie dies aktivieren, kann jeder mit dem Link darauf zugreifen — auch ohne Konto. Sie können dies jederzeit deaktivieren oder den Link vollständig widerrufen.",
+      "expiryLabel": "Läuft ab (optional)",
+      "passwordLabel": "Passwort (optional)",
+      "passwordPlaceholder": "Leer lassen für kein Passwort",
+      "create": "Link erstellen",
+      "tokenShownOnce": "Dieser Link wird nur einmal angezeigt — kopieren Sie ihn jetzt. Sie können ihn jederzeit unten widerrufen, aber er kann nicht erneut angezeigt werden.",
+      "copy": "Link kopieren",
+      "copied": "Kopiert!",
+      "existingTitle": "Bestehende Freigaben",
+      "empty": "Noch mit niemandem geteilt.",
+      "namedRecipient": "Mit einer Person geteilt",
+      "linkShare": "Link-Freigabe",
+      "anonymousBadge": "keine Anmeldung erforderlich",
+      "passwordBadge": "passwortgeschützt",
+      "revoke": "Widerrufen",
+      "close": "Schließen"
+    },
+    "sharedWithMe": {
+      "title": "Für mich freigegeben",
+      "empty": "Es wurde noch nichts mit Ihnen geteilt.",
+      "back": "Zurück zu Meine Dateien",
+      "openLink": "Öffnen"
+    },
+    "publicShare": {
+      "loading": "Wird geladen…",
+      "unavailable": "Dieser Link ist nicht mehr verfügbar.",
+      "unavailableHint": "Er wurde möglicherweise widerrufen, ist abgelaufen oder hat nie existiert. Bitten Sie die Person, die ihn geteilt hat, um einen neuen Link.",
+      "passwordPrompt": "Dieser Link ist passwortgeschützt.",
+      "passwordPlaceholder": "Passwort eingeben",
+      "unlock": "Entsperren",
+      "unlockFailed": "Dieses Passwort ist nicht korrekt.",
+      "download": "Herunterladen",
+      "permissionView": "Sie können diese Datei ansehen.",
+      "permissionComment": "Sie können diese Datei ansehen und kommentieren.",
+      "permissionEdit": "Sie können diese Datei bearbeiten.",
+      "replaceLabel": "Durch eine neue Datei ersetzen",
+      "replaceButton": "Ersatzdatei hochladen",
+      "replaceSuccess": "Die Datei wurde aktualisiert."
+    },
+    "doc": {
+      "backToFiles": "Zurück zu Meine Dateien",
+      "saving": "Wird gespeichert…",
+      "saved": "Gespeichert",
+      "unsavedChanges": "Nicht gespeicherte Änderungen",
+      "viewOnlyBanner": "Sie haben nur Lesezugriff — Änderungen können nicht gespeichert werden.",
+      "lease": {
+        "otherEditing": "Eine andere Person bearbeitet dieses Dokument gerade.",
+        "takeOver": "Übernehmen"
+      },
+      "conflict": {
+        "staleVersion": "Dieses Dokument wurde anderswo geändert. Laden Sie neu, um die aktuelle Version zu sehen.",
+        "locked": "Ein anderer Bearbeiter hat dieses Dokument gerade übernommen."
+      },
+      "reload": "Neu laden"
+    },
+    "ai": {
+      "title": "KI-Assistent",
+      "enableToggle": "KI-Assistent für dieses Dokument aktivieren",
+      "disabledHint": "Der KI-Assistent ist für dieses Dokument deaktiviert. Der Eigentümer kann ihn oben aktivieren.",
+      "selectTextHint": "Wählen Sie einen Text aus und entscheiden Sie dann, was der KI-Assistent tun soll.",
+      "running": "Wird bearbeitet…",
+      "accept": "Übernehmen",
+      "discard": "Verwerfen",
+      "forbidden": "Der KI-Assistent ist für dieses Dokument nicht verfügbar.",
+      "budgetExceeded": "Das monatliche KI-Assistent-Budget wurde aufgebraucht.",
+      "capability": {
+        "continue_writing": "Weiterschreiben",
+        "rewrite_shorter": "Kürzer machen",
+        "rewrite_longer": "Länger machen",
+        "rewrite_formal": "Formeller machen",
+        "rewrite_plain": "Einfacher machen",
+        "summarize": "Zusammenfassen",
+        "fix_grammar": "Rechtschreibung & Grammatik korrigieren",
+        "translate": "Übersetzen",
+        "outline": "Gliederung"
+      }
+    },
+    "sheet": {
+      "backToFiles": "Zurück zu Meine Dateien",
+      "saving": "Wird gespeichert…",
+      "saved": "Gespeichert",
+      "unsavedChanges": "Nicht gespeicherte Änderungen",
+      "viewOnlyBanner": "Sie haben nur Lesezugriff — Änderungen können nicht gespeichert werden.",
+      "formulaBarPlaceholder": "Geben Sie einen Wert oder eine Formel ein, z. B. =SUM(A1:A3)",
+      "addSheet": "+ Tabelle hinzufügen",
+      "addSheetPrompt": "Tabellenname",
+      "recalc": "Neu berechnen",
+      "exportCsv": "CSV exportieren",
+      "exportXlsx": "XLSX exportieren",
+      "import": "Importieren",
+      "importReportTitle": "Einige Formeln konnten nicht verstanden werden",
+      "importReportHint": "Sie wurden unverändert importiert und zeigen #NAME?, bis Sie sie ersetzen.",
+      "lease": {
+        "otherEditing": "Eine andere Person bearbeitet diese Tabelle gerade.",
+        "takeOver": "Übernehmen"
+      },
+      "conflict": {
+        "staleVersion": "Diese Tabelle wurde anderswo geändert. Laden Sie neu, um die aktuelle Version zu sehen.",
+        "locked": "Ein anderer Bearbeiter hat diese Tabelle gerade übernommen."
+      },
+      "reload": "Neu laden"
+    }
+  }
+}

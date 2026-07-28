@@ -1,0 +1,5 @@
+VBWD Office E2E fixture file.
+
+This exact byte sequence is uploaded through the real /api/v1/office/documents
+endpoint and downloaded back through /api/v1/office/documents/<id>/content —
+the round-trip is verified byte-for-byte (S147-1 requirement B5).

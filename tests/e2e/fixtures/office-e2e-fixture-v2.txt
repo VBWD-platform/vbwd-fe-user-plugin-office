@@ -1,0 +1,2 @@
+VBWD Office E2E fixture file — VERSION 2 content, uploaded to prove the
+versions dialog lists real history from the backend (S147-1 acceptance #7).

@@ -1,0 +1,22 @@
+{
+  "debug_mode": {
+    "type": "boolean",
+    "default": false,
+    "description": "Enable verbose logging for the VBWD Office plugin"
+  },
+  "default_view_mode": {
+    "type": "string",
+    "default": "list",
+    "description": "Default Space file-manager view: 'list' or 'grid'"
+  },
+  "max_upload_mb": {
+    "type": "number",
+    "default": 50,
+    "description": "Client-side warning threshold for a single upload, in megabytes (the server is the enforcing authority)"
+  },
+  "preview_mime_allowlist": {
+    "type": "array",
+    "default": ["image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf", "text/plain"],
+    "description": "MIME types the preview pane will render inline; everything else offers download only"
+  }
+}

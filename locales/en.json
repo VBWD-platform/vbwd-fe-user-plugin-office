@@ -1,0 +1,197 @@
+{
+  "nav": {
+    "office": "VBWD Office"
+  },
+  "office": {
+    "title": "VBWD Space",
+    "root": "My files",
+    "loading": "Loading…",
+    "error": "Something went wrong. Please try again.",
+    "retry": "Retry",
+    "empty": {
+      "title": "This folder is empty",
+      "hint": "Drag files here, or use Upload to get started.",
+      "uploadCta": "Upload your first file"
+    },
+    "toolbar": {
+      "newFolder": "New folder",
+      "newDoc": "New document",
+      "newSheet": "New spreadsheet",
+      "upload": "Upload",
+      "viewList": "List view",
+      "viewGrid": "Grid view",
+      "search": "Search this folder…",
+      "sharedWithMe": "Shared with me"
+    },
+    "newFolder": {
+      "title": "New folder",
+      "placeholder": "Folder name",
+      "create": "Create",
+      "cancel": "Cancel"
+    },
+    "newDoc": {
+      "namePrompt": "Document name"
+    },
+    "newSheet": {
+      "namePrompt": "Spreadsheet name"
+    },
+    "node": {
+      "folder": "Folder",
+      "document": "Document",
+      "modified": "Modified",
+      "size": "Size"
+    },
+    "dropzone": {
+      "prompt": "Drop files to upload"
+    },
+    "upload": {
+      "uploading": "Uploading {name}…",
+      "done": "Uploaded {name}",
+      "failed": "Failed to upload {name}",
+      "cancel": "Cancel"
+    },
+    "contextMenu": {
+      "open": "Open",
+      "share": "Share",
+      "rename": "Rename",
+      "move": "Move",
+      "download": "Download",
+      "versions": "Versions",
+      "trash": "Move to trash"
+    },
+    "rename": {
+      "title": "Rename",
+      "placeholder": "New name",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "versions": {
+      "title": "Version history",
+      "restore": "Restore",
+      "current": "Current",
+      "empty": "No previous versions yet.",
+      "close": "Close"
+    },
+    "usage": {
+      "label": "Storage used",
+      "of": "of"
+    },
+    "preview": {
+      "unavailable": "No preview available for this file type.",
+      "downloadInstead": "Download to view it."
+    },
+    "share": {
+      "title": "Share \"{name}\"",
+      "recipientLabel": "Share with a person (optional)",
+      "recipientPlaceholder": "email@example.com",
+      "permissionLabel": "Permission",
+      "permission": {
+        "view": "View",
+        "comment": "Comment",
+        "edit": "Edit"
+      },
+      "anonymousLabel": "Anyone with the link, no sign-in required",
+      "anonymousHint": "Turning this on means anyone who has the link can open it — even people without an account. You can turn it off, or revoke the link entirely, at any time.",
+      "expiryLabel": "Expires (optional)",
+      "passwordLabel": "Password (optional)",
+      "passwordPlaceholder": "Leave blank for no password",
+      "create": "Create link",
+      "tokenShownOnce": "This link is shown once — copy it now. You can always revoke it below, but it cannot be shown again.",
+      "copy": "Copy link",
+      "copied": "Copied!",
+      "existingTitle": "Existing shares",
+      "empty": "No one has been shared with yet.",
+      "namedRecipient": "Shared with a person",
+      "linkShare": "Link share",
+      "anonymousBadge": "no sign-in required",
+      "passwordBadge": "password-protected",
+      "revoke": "Revoke",
+      "close": "Close"
+    },
+    "sharedWithMe": {
+      "title": "Shared with me",
+      "empty": "Nothing has been shared with you yet.",
+      "back": "Back to My files",
+      "openLink": "Open"
+    },
+    "publicShare": {
+      "loading": "Loading…",
+      "unavailable": "This link is no longer available.",
+      "unavailableHint": "It may have been revoked, expired, or never existed. Ask the person who shared it for a new link.",
+      "passwordPrompt": "This link is password-protected.",
+      "passwordPlaceholder": "Enter password",
+      "unlock": "Unlock",
+      "unlockFailed": "That password is not correct.",
+      "download": "Download",
+      "permissionView": "You can view this file.",
+      "permissionComment": "You can view and comment on this file.",
+      "permissionEdit": "You can edit this file.",
+      "replaceLabel": "Replace with a new file",
+      "replaceButton": "Upload replacement",
+      "replaceSuccess": "The file has been updated."
+    },
+    "doc": {
+      "backToFiles": "Back to My files",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "unsavedChanges": "Unsaved changes",
+      "viewOnlyBanner": "You have view-only access — changes cannot be saved.",
+      "lease": {
+        "otherEditing": "Another person is currently editing this document.",
+        "takeOver": "Take over"
+      },
+      "conflict": {
+        "staleVersion": "This document changed elsewhere. Reload to see the latest version.",
+        "locked": "Another editor just took over this document."
+      },
+      "reload": "Reload"
+    },
+    "ai": {
+      "title": "AI helper",
+      "enableToggle": "Enable AI helper for this document",
+      "disabledHint": "The AI helper is off for this document. The owner can turn it on above.",
+      "selectTextHint": "Select some text, then choose what you'd like the AI helper to do.",
+      "running": "Thinking…",
+      "accept": "Accept",
+      "discard": "Discard",
+      "forbidden": "The AI helper is not available for this document.",
+      "budgetExceeded": "The monthly AI helper budget has been used up.",
+      "capability": {
+        "continue_writing": "Continue writing",
+        "rewrite_shorter": "Make shorter",
+        "rewrite_longer": "Make longer",
+        "rewrite_formal": "Make formal",
+        "rewrite_plain": "Make plain",
+        "summarize": "Summarise",
+        "fix_grammar": "Fix spelling & grammar",
+        "translate": "Translate",
+        "outline": "Outline"
+      }
+    },
+    "sheet": {
+      "backToFiles": "Back to My files",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "unsavedChanges": "Unsaved changes",
+      "viewOnlyBanner": "You have view-only access — changes cannot be saved.",
+      "formulaBarPlaceholder": "Enter a value or a formula, e.g. =SUM(A1:A3)",
+      "addSheet": "+ Add sheet",
+      "addSheetPrompt": "Sheet name",
+      "recalc": "Recalculate",
+      "exportCsv": "Export CSV",
+      "exportXlsx": "Export XLSX",
+      "import": "Import",
+      "importReportTitle": "Some formulas could not be understood",
+      "importReportHint": "They were imported as-is and show #NAME? until you replace them.",
+      "lease": {
+        "otherEditing": "Another person is currently editing this spreadsheet.",
+        "takeOver": "Take over"
+      },
+      "conflict": {
+        "staleVersion": "This spreadsheet changed elsewhere. Reload to see the latest version.",
+        "locked": "Another editor just took over this spreadsheet."
+      },
+      "reload": "Reload"
+    }
+  }
+}

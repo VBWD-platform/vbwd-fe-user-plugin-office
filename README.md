@@ -31,6 +31,19 @@ export const officePlugin: IPlugin = { /* … */ };
 `meta.requiredUserPermission: 'office.use'` — an **access-level** permission, matching the
 backend's `@require_user_permission`, not admin RBAC.
 
+## Runtime dependencies (host app)
+
+The VBWD Docs editor is built on Tiptap, so the **host app** must carry these — they are not
+vendored here:
+
+```
+@tiptap/vue-3  @tiptap/pm  @tiptap/starter-kit  @tiptap/extension-image      (^3.29.2)
+```
+
+This is the fe-user analogue of a backend plugin shipping its own `requirements.txt`. If the
+Docs route fails to resolve `@tiptap/vue-3`, the host app's `package.json` is missing them —
+the plugin code is fine. This repo's CI installs them explicitly for the same reason.
+
 ## Testing note that matters
 
 Unit tests here must stub the **transport** (`fetch`), not the API-client method. Mocking

@@ -458,6 +458,26 @@ export interface OfficeAiResult {
   proposed_text: string;
 }
 
+// ---------------------------------------------------------------------------
+// S147-3 toolbar bundle — image assets, "insert table from file", and
+// Print/PDF/DOCX/Markdown export for VBWD Docs.
+// ---------------------------------------------------------------------------
+
+/** ``POST /docs/<id>/assets`` — the ``src`` is an ``office-asset:<node_id>``
+ * REFERENCE, never a fetchable URL by itself (see ``fetchAssetBlob`` below). */
+export interface OfficeDocAssetUploadResult {
+  node_id: string;
+  src: string;
+}
+
+export interface OfficeDocTableImportResult {
+  rows: string[][];
+  row_count: number;
+  column_count: number;
+}
+
+export type OfficeDocExportFormat = 'pdf' | 'docx' | 'md';
+
 async function docPutOrThrowConflict(
   url: string,
   body: unknown,
@@ -537,6 +557,65 @@ export const officeDocApi = {
     }
     return response.json();
   },
+
+  // -------------------------------------------------------------------
+  // S147-3 toolbar bundle — insert image, insert table from file, export.
+  // -------------------------------------------------------------------
+
+  /** Upload an image into the Doc's hidden ``_assets`` folder — returns
+   * the ``office-asset:`` src the editor writes into an image node. */
+  uploadAsset(
+    nodeId: string,
+    file: File,
+    onProgress?: UploadProgressHandler,
+  ): Promise<OfficeDocAssetUploadResult> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    return uploadMultipart(`${API}/docs/${nodeId}/assets`, formData, onProgress);
+  },
+
+  /** Fetch an inserted image's bytes as an auth-carrying Blob — a bare
+   * ``<img src="office-asset:...">`` cannot load (it is not a URL scheme a
+   * browser understands), so every rendered image goes through this. */
+  async fetchAssetBlob(nodeId: string, assetNodeId: string): Promise<Blob> {
+    const response = await fetch(`${API}/docs/${nodeId}/assets/${assetNodeId}`, {
+      headers: authHeaders(),
+    });
+    if (!response.ok) throw new Error(`Fetching asset failed: ${response.status}`);
+    return response.blob();
+  },
+
+  /** Recognise a table from an uploaded ``.csv``/``.xlsx`` — the caller
+   * inserts the returned rows as a real Tiptap table node. ``format`` is
+   * inferred from the filename when omitted (mirrors the backend). */
+  importTableFromFile(
+    nodeId: string,
+    file: File,
+    format?: 'csv' | 'xlsx',
+  ): Promise<OfficeDocTableImportResult> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    if (format) formData.append('format', format);
+    return uploadMultipart(`${API}/docs/${nodeId}/table-import`, formData);
+  },
+
+  /** Print/PDF/DOCX/Markdown export — the file bytes, ready for the caller
+   * to turn into a download (mirrors ``officeSheetApi.exportWorkbook``). */
+  async exportDoc(
+    nodeId: string,
+    format: OfficeDocExportFormat,
+    fallbackName: string,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await fetch(`${API}/docs/${nodeId}/export?format=${format}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error || `Export failed: ${response.status}`);
+    }
+    return { blob: await response.blob(), filename: filenameFromDisposition(response, fallbackName) };
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -563,9 +642,33 @@ export interface OfficeSheetCellModel {
   v?: OfficeSheetCellValue;
 }
 
+/** The DISPLAY-only per-cell formatting slot (S147-4 drag/toolbar slice) —
+ * narrowed to exactly the fields `sheet_content.normalize_cell_style`
+ * accepts on the backend; sending anything else is rejected with a 400. A
+ * style update REPLACES the stored style for that cell wholesale (the
+ * backend does not merge), so a caller that wants to flip one flag must
+ * spread the cell's current style first. */
+export type OfficeSheetNumberFormat = 'general' | 'number' | 'currency' | 'percent' | 'date';
+export type OfficeSheetTextAlignment = 'left' | 'center' | 'right';
+
+export interface OfficeSheetCellStyle {
+  format?: OfficeSheetNumberFormat;
+  decimals?: number;
+  bold?: boolean;
+  italic?: boolean;
+  align?: OfficeSheetTextAlignment;
+}
+
 export interface OfficeSheetTabModel {
   name: string;
   cells: Record<string, OfficeSheetCellModel>;
+  /** Present only once at least one cell on this sheet has been styled —
+   * mirrors the backend's `apply_presentation`, which omits an empty map
+   * rather than shipping `{}` on every sheet. */
+  styles?: Record<string, OfficeSheetCellStyle>;
+  /** `"A1:C1"`-style range strings — present only once at least one merge
+   * exists on this sheet. */
+  merges?: string[];
 }
 
 export interface OfficeSheetWorkbookModel {
@@ -598,14 +701,27 @@ export interface OfficeSheetView {
   lease: OfficeDocLeaseState;
 }
 
-/** One edit sent to `PUT /sheets/<id>/cells` — exactly one of `formula`,
- * `value`, or `clear` (the backend rejects anything else with a 400). */
+/** One edit sent to `PUT /sheets/<id>/cells`. Exactly one of `formula` /
+ * `value` / `clear` / `fill_from` / `style` (with `address`), or `merge` /
+ * `unmerge` (sheet-scoped, no `address`) — the backend rejects any other
+ * combination with a 400 (`OfficeSheetEditorService._apply_change`).
+ * `style: null` clears a cell's formatting. */
 export interface OfficeSheetCellChange {
   sheet: string;
-  address: string;
+  address?: string;
   formula?: string;
   value?: number | string | boolean | null;
   clear?: boolean;
+  /** The fill-handle drag (S147-4): copy `fill_from`'s formula/value (and
+   * style) into `address`, translating relative references server-side —
+   * see `OfficeSheetEditorService._apply_fill`. */
+  fill_from?: string;
+  style?: OfficeSheetCellStyle | null;
+  /** `"A1:C1"`-style range text — replaces any merge it overlaps. */
+  merge?: string;
+  /** Any cell address inside the merge to remove (not necessarily its
+   * top-left corner). */
+  unmerge?: string;
 }
 
 export interface OfficeSheetSaveResult {
@@ -618,7 +734,7 @@ export interface OfficeSheetImportResult {
   unmapped_formulas: { sheet: string; address: string; formula: string }[];
 }
 
-export type OfficeSheetExportFormat = 'csv' | 'xlsx';
+export type OfficeSheetExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 async function sheetPutOrThrowConflict(
   url: string,

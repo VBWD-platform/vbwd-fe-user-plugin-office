@@ -2,7 +2,7 @@
   <div
     class="office-context-menu"
     data-testid="office-context-menu"
-    :style="{ top: `${y}px`, left: `${x}px` }"
+    :style="{ top: `${clampedY}px`, left: `${clampedX}px` }"
     @click.stop
   >
     <button
@@ -59,12 +59,41 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { OfficeNode } from '../api/officeApi';
 
 export type OfficeContextMenuAction = 'download' | 'share' | 'rename' | 'move' | 'versions' | 'trash';
 
-defineProps<{ node: OfficeNode; x: number; y: number }>();
+/**
+ * Nominal menu box, used to keep the WHOLE menu on screen rather than just its
+ * top-left corner. Deliberately constants rather than a measured rect: the menu
+ * is positioned on the same tick it is created, so it has no layout yet, and a
+ * measure-then-reposition would make it visibly jump. Kept slightly generous —
+ * over-clamping costs a few pixels, under-clamping costs the whole feature.
+ */
+const MENU_WIDTH = 170;
+const MENU_HEIGHT = 200;
+const VIEWPORT_MARGIN = 8;
+
+const props = defineProps<{ node: OfficeNode; x: number; y: number }>();
 defineEmits<{ action: [action: OfficeContextMenuAction] }>();
+
+function clamp(requested: number, size: number, available: number): number {
+  // Never negative: on a viewport smaller than the menu, flush to the edge and
+  // let the menu scroll rather than positioning it off the top/left.
+  return Math.max(VIEWPORT_MARGIN, Math.min(requested, available - size - VIEWPORT_MARGIN));
+}
+
+// The bug this guards: `position: fixed` at the raw pointer put the menu at
+// y=723 in a 720px viewport for a row near the bottom of the list. It rendered,
+// it was "visible", and it was completely unclickable — elementFromPoint
+// returned null and every click timed out. Silent and total.
+const clampedX = computed(() =>
+  clamp(props.x, MENU_WIDTH, typeof window === 'undefined' ? Infinity : window.innerWidth),
+);
+const clampedY = computed(() =>
+  clamp(props.y, MENU_HEIGHT, typeof window === 'undefined' ? Infinity : window.innerHeight),
+);
 </script>
 
 <style scoped>

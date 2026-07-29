@@ -68,7 +68,15 @@ export const officePlugin: IPlugin = {
       name: 'office-sheet',
       component: () => import('./src/views/OfficeSheetEditor.vue'),
       props: true,
-      meta: { requiresAuth: true, requiredUserPermission: OFFICE_USE_PERMISSION },
+      // `fullHeight` is the host layout's opt-in for an app-like view that owns
+      // its own scrolling (UserLayout's `isFullHeightRoute`). Without it
+      // `.main-content` is height:auto, a child's `height: 100%` resolves to
+      // nothing, and the virtualised grid renders every row instead of a window.
+      meta: {
+        requiresAuth: true,
+        requiredUserPermission: OFFICE_USE_PERMISSION,
+        fullHeight: true,
+      },
     });
   },
 

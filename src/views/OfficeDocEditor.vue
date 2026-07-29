@@ -97,121 +97,13 @@
 
       <div class="office-doc-body">
         <div class="office-doc-editor-column">
-          <div
+          <OfficeDocToolbar
             v-if="editor"
-            class="office-doc-toolbar"
-            data-testid="office-doc-toolbar"
-          >
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('bold') }"
-              data-testid="office-doc-toolbar-bold"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleBold().run()"
-            >
-              B
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('italic') }"
-              data-testid="office-doc-toolbar-italic"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleItalic().run()"
-            >
-              I
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('underline') }"
-              data-testid="office-doc-toolbar-underline"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleUnderline().run()"
-            >
-              U
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('strike') }"
-              data-testid="office-doc-toolbar-strike"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleStrike().run()"
-            >
-              S
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }"
-              data-testid="office-doc-toolbar-h1"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
-            >
-              H1
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
-              data-testid="office-doc-toolbar-h2"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
-            >
-              H2
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('bulletList') }"
-              data-testid="office-doc-toolbar-bullet-list"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleBulletList().run()"
-            >
-              •
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('orderedList') }"
-              data-testid="office-doc-toolbar-ordered-list"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleOrderedList().run()"
-            >
-              1.
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('blockquote') }"
-              data-testid="office-doc-toolbar-blockquote"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleBlockquote().run()"
-            >
-              &quot;
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              :class="{ 'is-active': editor.isActive('codeBlock') }"
-              data-testid="office-doc-toolbar-code-block"
-              :disabled="!isEditable"
-              @click="editor.chain().focus().toggleCodeBlock().run()"
-            >
-              {{ '</>' }}
-            </button>
-            <button
-              type="button"
-              class="office-doc-toolbar-btn"
-              data-testid="office-doc-toolbar-link"
-              :disabled="!isEditable"
-              @click="onInsertLink"
-            >
-              🔗
-            </button>
-          </div>
+            :editor="editor"
+            :node-id="nodeId"
+            :doc-name="store.name"
+            :can-edit="isEditable"
+          />
 
           <EditorContent
             class="office-doc-content"
@@ -246,14 +138,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { Editor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
+import { TextStyleKit } from '@tiptap/extension-text-style';
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import { officeApi, type OfficeAiCapability, type OfficeVersion } from '../api/officeApi';
 import { useOfficeDocStore } from '../stores/useOfficeDocStore';
+import { OfficeAssetImage } from '../tiptap/OfficeAssetImage';
 import OfficeDocAiSidebar from '../components/OfficeDocAiSidebar.vue';
+import OfficeDocToolbar from '../components/OfficeDocToolbar.vue';
 import OfficeVersionsDialog from '../components/OfficeVersionsDialog.vue';
 
 // A bounded window of surrounding text sent alongside the selection (data
@@ -277,6 +172,12 @@ let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 let aiPatchRange: { from: number; to: number } | null = null;
 
 const nodeId = computed(() => String(route.params.id || ''));
+
+// Consumed by `OfficeAssetImageNode.vue` (a Tiptap NodeView mounted deep
+// inside `EditorContent`, outside this component's own template) to build
+// the authenticated `GET /docs/<nodeId>/assets/<assetId>` fetch URL for a
+// rendered image — see that component's docstring.
+provide('officeDocNodeId', nodeId);
 
 const isEditable = computed(
   () => store.canEdit() && !(store.lease?.held && !store.lease?.is_self),
@@ -315,7 +216,17 @@ function buildEditor(): void {
     editable: isEditable.value,
     extensions: [
       StarterKit.configure({ link: { openOnClick: false } }),
-      Image,
+      // Only fontFamily/fontSize — color/backgroundColor/lineHeight stay
+      // OFF: doc_content.py's `_validate_text_style_attrs` allow-lists just
+      // those two keys on a `textStyle` mark (a CSS-injection surface into
+      // the HTML/PDF export path otherwise), so the toolbar never offers
+      // controls for attrs the backend would reject on save.
+      TextStyleKit.configure({ color: false, backgroundColor: false, lineHeight: false }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      OfficeAssetImage,
     ],
     onUpdate: () => {
       store.markDirty();
@@ -338,14 +249,6 @@ async function onTakeover(): Promise<void> {
 async function onReload(): Promise<void> {
   await store.load(nodeId.value);
   if (store.content) editor.value?.commands.setContent(store.content);
-}
-
-function onInsertLink(): void {
-  if (!editor.value) return;
-  // eslint-disable-next-line no-alert
-  const url = window.prompt('URL (https://...)');
-  if (!url) return;
-  editor.value.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
 }
 
 function textWindow(from: number, to: number): { before: string; after: string } {
@@ -486,37 +389,44 @@ onBeforeUnmount(() => {
   flex-direction: column;
   min-width: 0;
 }
-.office-doc-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--vbwd-color-border, #e9ecef);
-}
-.office-doc-toolbar-btn {
-  min-width: 28px;
-  height: 28px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: var(--vbwd-color-text-primary, #2c3e50);
-}
-.office-doc-toolbar-btn:hover {
-  background: var(--vbwd-bg-hover, #f5f6f7);
-}
-.office-doc-toolbar-btn.is-active {
-  background: var(--vbwd-color-primary, #3498db);
-  color: #fff;
-}
-.office-doc-toolbar-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 .office-doc-content {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+}
+.office-doc-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+.office-doc-content :deep(td),
+.office-doc-content :deep(th) {
+  border: 1px solid var(--vbwd-color-border, #e9ecef);
+  padding: 6px 8px;
+}
+.office-doc-content :deep(th) {
+  background: var(--vbwd-bg-hover, #f5f6f7);
+  font-weight: 600;
+}
+
+/* Print — only the document body, never the app chrome around it. This
+ * covers everything under THIS component (header/toolbar/banners/AI
+ * sidebar); the core app shell's own nav/menus are outside this plugin's
+ * file boundary and cannot be suppressed from here. */
+@media print {
+  .office-doc-header,
+  .office-doc-banner,
+  .office-doc-ai-sidebar {
+    display: none !important;
+  }
+  .office-doc-editor-page {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .office-doc-content {
+    overflow: visible;
+    padding: 0;
+  }
 }
 </style>

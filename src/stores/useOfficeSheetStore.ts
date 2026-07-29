@@ -7,10 +7,13 @@ import {
   type OfficeDocLeaseState,
   type OfficeSheetCellChange,
   type OfficeSheetCellModel,
+  type OfficeSheetCellStyle,
   type OfficeSheetCellValue,
   type OfficeSheetExportFormat,
   type OfficeSheetImportResult,
+  type OfficeSheetNumberFormat,
   type OfficeSheetTabModel,
+  type OfficeSheetTextAlignment,
   type OfficeSheetView,
   type OfficeSheetWorkbookModel,
 } from '../api/officeApi';
@@ -29,6 +32,12 @@ const SAVE_DEBOUNCE_MS = 400;
 /** Access levels that may save cells or hold the edit lease — mirrors the
  * backend's `EDIT_CAPABLE_ACCESS` (owner or an edit-permission share). */
 const EDIT_CAPABLE_ACCESS = new Set(['owner', 'edit']);
+
+/** Mirrors the backend's `sheet_content.MAXIMUM_STYLE_DECIMAL_PLACES` — the
+ * decimals +/- toolbar buttons must clamp to the same ceiling the backend
+ * would otherwise reject with a 400. */
+const MAXIMUM_STYLE_DECIMAL_PLACES = 10;
+const DEFAULT_STYLE_DECIMALS = 2;
 
 export type OfficeSheetConflictKind = 'stale_version' | 'locked' | null;
 
@@ -85,6 +94,14 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
 
   function getCell(sheetName: string, address: string): OfficeSheetCellModel {
     return getSheetTab(sheetName)?.cells[address] ?? {};
+  }
+
+  function getCellStyle(sheetName: string, address: string): OfficeSheetCellStyle {
+    return getSheetTab(sheetName)?.styles?.[address] ?? {};
+  }
+
+  function getMerges(sheetName: string): string[] {
+    return getSheetTab(sheetName)?.merges ?? [];
   }
 
   function applyView(view: OfficeSheetView): void {
@@ -165,6 +182,150 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
     scheduleSave();
   }
 
+  // ------------------------------------------------------------------
+  // Toolbar / fill-handle presentation edits (S147-4 drag/toolbar slice).
+  //
+  // Cell VALUES are echoed locally for instant feedback (`applyLocalEcho`,
+  // above); presentation edits are queued the same way through
+  // `pendingChanges` + `scheduleSave`, but merge/unmerge/fill are NOT
+  // echoed locally — the backend's overlap-resolution (merge) and formula
+  // translation (fill) are non-trivial rules that already exist in exactly
+  // one place (`OfficeSheetEditorService`); duplicating them here would be
+  // a second, driftable copy for no real benefit, since a toolbar click is
+  // an infrequent, discrete action, not a hot per-keystroke path. Instead
+  // `flushSave` re-fetches the workbook after any batch that touched
+  // presentation (see `changeTouchesPresentation`/`refreshPresentation`
+  // below) — the server stays the single source of truth. Style toggles ARE
+  // echoed locally (simple object replace, no overlap rule) for instant
+  // bold/italic/format feedback.
+  // ------------------------------------------------------------------
+
+  function applyStyleUpdater(
+    sheetName: string,
+    addresses: string[],
+    updater: (current: OfficeSheetCellStyle) => OfficeSheetCellStyle,
+  ): void {
+    if (!workbook.value || !canEdit()) return;
+    const tab = getSheetTab(sheetName);
+    if (!tab) return;
+    if (!tab.styles) tab.styles = {};
+    for (const address of addresses) {
+      const nextStyle = updater(tab.styles[address] ?? {});
+      const hasAnyField = Object.keys(nextStyle).length > 0;
+      if (hasAnyField) {
+        tab.styles[address] = nextStyle;
+      } else {
+        delete tab.styles[address];
+      }
+      pendingChanges.set(pendingKey(sheetName, address), {
+        sheet: sheetName,
+        address,
+        style: hasAnyField ? nextStyle : null,
+      });
+    }
+    dirty.value = true;
+    scheduleSave();
+  }
+
+  function toggleBold(sheetName: string, addresses: string[]): void {
+    const allBoldAlready = addresses.length > 0 && addresses.every(
+      (address) => !!getCellStyle(sheetName, address).bold,
+    );
+    applyStyleUpdater(sheetName, addresses, (current) => ({ ...current, bold: !allBoldAlready }));
+  }
+
+  function toggleItalic(sheetName: string, addresses: string[]): void {
+    const allItalicAlready = addresses.length > 0 && addresses.every(
+      (address) => !!getCellStyle(sheetName, address).italic,
+    );
+    applyStyleUpdater(sheetName, addresses, (current) => ({ ...current, italic: !allItalicAlready }));
+  }
+
+  function setAlignment(sheetName: string, addresses: string[], align: OfficeSheetTextAlignment): void {
+    applyStyleUpdater(sheetName, addresses, (current) => ({ ...current, align }));
+  }
+
+  /** Switching to number/currency seeds a default decimal count (matching
+   * Excel/Sheets' own first-click behaviour); switching to general/percent/
+   * date drops any previously-set decimals rather than carrying a stale
+   * value across an unrelated format. */
+  function setNumberFormat(sheetName: string, addresses: string[], format: OfficeSheetNumberFormat): void {
+    applyStyleUpdater(sheetName, addresses, (current) => {
+      const next: OfficeSheetCellStyle = { ...current, format };
+      if (format === 'number' || format === 'currency') {
+        next.decimals = current.decimals ?? DEFAULT_STYLE_DECIMALS;
+      } else {
+        delete next.decimals;
+      }
+      return next;
+    });
+  }
+
+  function adjustDecimals(sheetName: string, addresses: string[], delta: number): void {
+    applyStyleUpdater(sheetName, addresses, (current) => {
+      const baseline = current.decimals ?? DEFAULT_STYLE_DECIMALS;
+      const nextDecimals = Math.min(
+        MAXIMUM_STYLE_DECIMAL_PLACES,
+        Math.max(0, baseline + delta),
+      );
+      return { ...current, decimals: nextDecimals };
+    });
+  }
+
+  function mergeRange(sheetName: string, rangeText: string): void {
+    if (!nodeId.value || !canEdit()) return;
+    pendingChanges.set(pendingKey(sheetName, `merge:${rangeText}`), { sheet: sheetName, merge: rangeText });
+    dirty.value = true;
+    scheduleSave();
+  }
+
+  function unmergeAt(sheetName: string, addressText: string): void {
+    if (!nodeId.value || !canEdit()) return;
+    pendingChanges.set(pendingKey(sheetName, `unmerge:${addressText}`), {
+      sheet: sheetName,
+      unmerge: addressText,
+    });
+    dirty.value = true;
+    scheduleSave();
+  }
+
+  /** The fill-handle drag: copy ONE source cell's formula/value/style into
+   * every target address, via the backend's `fill_from` operation (never
+   * re-derived client-side — see the section docstring above). */
+  function fillCells(sheetName: string, sourceAddress: string, targetAddresses: string[]): void {
+    if (!nodeId.value || !canEdit()) return;
+    for (const targetAddress of targetAddresses) {
+      pendingChanges.set(pendingKey(sheetName, targetAddress), {
+        sheet: sheetName,
+        address: targetAddress,
+        fill_from: sourceAddress,
+      });
+    }
+    dirty.value = true;
+    scheduleSave();
+  }
+
+  function changeTouchesPresentation(change: OfficeSheetCellChange): boolean {
+    return (
+      change.style !== undefined ||
+      change.merge !== undefined ||
+      change.unmerge !== undefined ||
+      change.fill_from !== undefined
+    );
+  }
+
+  /** Re-fetch the workbook (cells + styles + merges) after a save batch that
+   * touched presentation — cheaper than a full `load()` (no lease
+   * re-acquire, no polling restart) and the simplest correct way to pick up
+   * server-computed state (merge overlap resolution, fill-handle style
+   * copy) this store deliberately does not replicate locally. */
+  async function refreshPresentation(): Promise<void> {
+    if (!nodeId.value) return;
+    const view = await officeSheetApi.getSheet(nodeId.value);
+    workbook.value = view.workbook;
+    versionNo.value = view.version_no;
+  }
+
   function scheduleSave(): void {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(flushSave, SAVE_DEBOUNCE_MS);
@@ -173,11 +334,13 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
   async function flushSave(): Promise<boolean> {
     if (!nodeId.value || pendingChanges.size === 0) return true;
     const changes = Array.from(pendingChanges.values());
+    const touchesPresentation = changes.some(changeTouchesPresentation);
     pendingChanges.clear();
     saving.value = true;
     try {
       const result = await officeSheetApi.saveCells(nodeId.value, changes, versionNo.value);
       applySaveResult(result);
+      if (touchesPresentation) await refreshPresentation();
       dirty.value = pendingChanges.size > 0;
       conflict.value = null;
       return true;
@@ -338,10 +501,20 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
     canEdit,
     getSheetTab,
     getCell,
+    getCellStyle,
+    getMerges,
     load,
     createSheet,
     setCellFromRawInput,
     addSheetTab,
+    toggleBold,
+    toggleItalic,
+    setAlignment,
+    setNumberFormat,
+    adjustDecimals,
+    mergeRange,
+    unmergeAt,
+    fillCells,
     flushSave,
     recalcAll,
     exportWorkbook,

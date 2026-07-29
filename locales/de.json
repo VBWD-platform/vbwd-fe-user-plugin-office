@@ -144,7 +144,31 @@
         "staleVersion": "Dieses Dokument wurde anderswo geändert. Laden Sie neu, um die aktuelle Version zu sehen.",
         "locked": "Ein anderer Bearbeiter hat dieses Dokument gerade übernommen."
       },
-      "reload": "Neu laden"
+      "reload": "Neu laden",
+      "image": {
+        "loading": "Bild wird geladen…"
+      },
+      "toolbar": {
+        "styleNormal": "Normaler Text",
+        "styleHeading1": "Überschrift 1",
+        "styleHeading2": "Überschrift 2",
+        "styleHeading3": "Überschrift 3",
+        "styleQuote": "Zitat",
+        "styleCodeBlock": "Codeblock",
+        "fontDefault": "Standardschrift",
+        "sizeDefault": "Standardgröße",
+        "insertImage": "Bild einfügen",
+        "insertLink": "Link einfügen",
+        "insertTable": "Tabelle einfügen",
+        "insertTableFromFile": "Tabelle aus Datei einfügen (.csv/.xlsx)",
+        "indent": "Einrücken",
+        "outdent": "Ausrücken",
+        "print": "Drucken",
+        "export": "Exportieren",
+        "exportPdf": "PDF (.pdf)",
+        "exportDocx": "Word (.docx)",
+        "exportMarkdown": "Markdown (.md)"
+      }
     },
     "ai": {
       "title": "KI-Assistent",
@@ -181,6 +205,21 @@
       "exportCsv": "CSV exportieren",
       "exportXlsx": "XLSX exportieren",
       "import": "Importieren",
+      "toolbar": {
+        "alignLeft": "Links",
+        "alignCenter": "Zentriert",
+        "alignRight": "Rechts",
+        "formatGeneral": "Standard",
+        "formatNumber": "Zahl",
+        "formatCurrency": "Währung",
+        "formatPercent": "Prozent",
+        "formatDate": "Datum",
+        "merge": "Verbinden",
+        "unmerge": "Trennen",
+        "print": "Drucken",
+        "export": "Exportieren",
+        "exportPdf": "PDF exportieren"
+      },
       "importReportTitle": "Einige Formeln konnten nicht verstanden werden",
       "importReportHint": "Sie wurden unverändert importiert und zeigen #NAME?, bis Sie sie ersetzen.",
       "lease": {

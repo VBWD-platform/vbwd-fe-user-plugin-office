@@ -165,8 +165,9 @@ describe('OfficeSheetEditor', () => {
     await flushPromises();
 
     const cells = wrapper.findAll('[data-testid="office-sheet-cell"]');
-    // Row 1, column 2 (B1) — the formula cell.
-    await cells[1].trigger('click');
+    // Row 1, column 2 (B1) — the formula cell. Selection is driven by
+    // mousedown (not click) so a drag-select can begin on the same event.
+    await cells[1].trigger('mousedown', { button: 0 });
 
     const formulaInput = wrapper.find('[data-testid="office-sheet-formula-bar-input"]')
       .element as HTMLInputElement;

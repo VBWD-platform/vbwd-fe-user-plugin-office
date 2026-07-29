@@ -144,7 +144,31 @@
         "staleVersion": "This document changed elsewhere. Reload to see the latest version.",
         "locked": "Another editor just took over this document."
       },
-      "reload": "Reload"
+      "reload": "Reload",
+      "image": {
+        "loading": "Loading image…"
+      },
+      "toolbar": {
+        "styleNormal": "Normal text",
+        "styleHeading1": "Heading 1",
+        "styleHeading2": "Heading 2",
+        "styleHeading3": "Heading 3",
+        "styleQuote": "Quote",
+        "styleCodeBlock": "Code block",
+        "fontDefault": "Default font",
+        "sizeDefault": "Default size",
+        "insertImage": "Insert image",
+        "insertLink": "Insert link",
+        "insertTable": "Insert table",
+        "insertTableFromFile": "Insert table from file (.csv/.xlsx)",
+        "indent": "Indent",
+        "outdent": "Outdent",
+        "print": "Print",
+        "export": "Export",
+        "exportPdf": "PDF (.pdf)",
+        "exportDocx": "Word (.docx)",
+        "exportMarkdown": "Markdown (.md)"
+      }
     },
     "ai": {
       "title": "AI helper",
@@ -181,6 +205,21 @@
       "exportCsv": "Export CSV",
       "exportXlsx": "Export XLSX",
       "import": "Import",
+      "toolbar": {
+        "alignLeft": "Left",
+        "alignCenter": "Center",
+        "alignRight": "Right",
+        "formatGeneral": "General",
+        "formatNumber": "Number",
+        "formatCurrency": "Currency",
+        "formatPercent": "Percent",
+        "formatDate": "Date",
+        "merge": "Merge",
+        "unmerge": "Unmerge",
+        "print": "Print",
+        "export": "Export",
+        "exportPdf": "Export PDF"
+      },
       "importReportTitle": "Some formulas could not be understood",
       "importReportHint": "They were imported as-is and show #NAME? until you replace them.",
       "lease": {

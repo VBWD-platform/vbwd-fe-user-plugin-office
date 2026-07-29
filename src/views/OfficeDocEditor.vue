@@ -18,7 +18,7 @@
         <span
           class="office-doc-save-status"
           data-testid="office-doc-save-status"
-        >{{ saveStatusLabel }}</span>
+        >{{ $t(saveStatusLabel) }}</span>
         <button
           type="button"
           class="vbwd-btn vbwd-btn--ghost vbwd-btn--sm"

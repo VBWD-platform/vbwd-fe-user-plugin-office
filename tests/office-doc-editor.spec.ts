@@ -146,3 +146,45 @@ describe('OfficeDocEditor', () => {
     wrapper.unmount();
   });
 });
+
+describe('OfficeDocEditor — i18n', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    mockAcquireLease.mockResolvedValue({
+      held: true,
+      holder_user_id: 'me',
+      is_self: true,
+      granted: true,
+      expires_at: '2026-07-27T00:01:30Z',
+    });
+    mockPresence.mockResolvedValue({
+      held: false,
+      holder_user_id: null,
+      is_self: false,
+      granted: true,
+      expires_at: null,
+    });
+  });
+
+  it('translates the save-status label instead of rendering the raw i18n key', async () => {
+    // The suite's default $t is the identity function, which cannot tell a
+    // translated string from an untranslated key — which is exactly how
+    // `{{ saveStatusLabel }}` shipped showing a literal "office.doc.saved" to
+    // the user. This mount uses a MARKING translator, so the assertion proves
+    // the value actually went through $t rather than being interpolated raw.
+    mockGetDoc.mockResolvedValue(baseDocView());
+
+    const wrapper = mount(OfficeDocEditor, {
+      global: {
+        mocks: { $t: (key: string) => `translated:${key}` },
+        stubs: { 'router-link': true },
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="office-doc-save-status"]').text()).toBe(
+      'translated:office.doc.saved',
+    );
+  });
+});

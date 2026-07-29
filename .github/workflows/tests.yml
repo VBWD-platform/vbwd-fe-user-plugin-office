@@ -36,19 +36,12 @@ jobs:
         working-directory: app
         run: npm ci
 
-      # This plugin's OWN runtime dependencies — the fe-user analogue of a
-      # backend plugin shipping its own requirements.txt. The Docs editor is
-      # built on Tiptap, which the host app does not depend on for its own sake,
-      # so a per-plugin CI that clones the app at `main` would fail to resolve
-      # them. Keep in step with the host app's package.json.
-      - name: Install plugin runtime dependencies (VBWD Docs editor)
-        working-directory: app
-        run: |
-          npm install --no-save --no-audit --no-fund \
-            @tiptap/vue-3@^3.29.2 \
-            @tiptap/pm@^3.29.2 \
-            @tiptap/starter-kit@^3.29.2 \
-            @tiptap/extension-image@^3.29.2
+      # NOTE: the Docs editor's Tiptap dependencies are declared by the HOST APP
+      # (vbwd-fe-user's package.json), so `npm ci` above installs them. This job
+      # briefly installed them explicitly, as a workaround for the period when
+      # they existed only in one working tree; that workaround is gone now the
+      # app repo owns them, because two places declaring one dependency is two
+      # places to drift.
 
       - name: Unit tests
         working-directory: app

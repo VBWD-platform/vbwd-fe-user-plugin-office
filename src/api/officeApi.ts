@@ -453,7 +453,8 @@ export type OfficeAiCapability =
   | 'summarize'
   | 'fix_grammar'
   | 'translate'
-  | 'outline';
+  | 'outline'
+  | 'freeform';
 
 export interface RunAiCapabilityInput {
   capability: OfficeAiCapability;
@@ -461,6 +462,11 @@ export interface RunAiCapabilityInput {
   contextBefore?: string;
   contextAfter?: string;
   targetLanguage?: string;
+  /** Only meaningful (and only ever SENT) for the `freeform` capability —
+   * see `runAiCapability` below, which mirrors the backend's own
+   * "a `prompt` field is rejected for every capability except freeform"
+   * control by never putting the key on the request body at all otherwise. */
+  prompt?: string;
 }
 
 export interface OfficeAiResult {
@@ -543,16 +549,22 @@ export const officeDocApi = {
   },
 
   async runAiCapability(nodeId: string, input: RunAiCapabilityInput): Promise<OfficeAiResult> {
+    const body: Record<string, unknown> = {
+      capability: input.capability,
+      selection_text: input.selectionText || '',
+      context_before: input.contextBefore || '',
+      context_after: input.contextAfter || '',
+      target_language: input.targetLanguage,
+    };
+    // The `prompt` KEY itself is only ever present on the wire for the
+    // freeform capability — the backend 400s a `prompt` field on any other
+    // capability (the raw-prompt-rejection control), so this never even
+    // tries for a preset one.
+    if (input.capability === 'freeform') body.prompt = input.prompt || '';
     const response = await fetch(`${API}/docs/${nodeId}/ai`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        capability: input.capability,
-        selection_text: input.selectionText || '',
-        context_before: input.contextBefore || '',
-        context_after: input.contextAfter || '',
-        target_language: input.targetLanguage,
-      }),
+      body: JSON.stringify(body),
     });
     if (response.status === 403) {
       const body = (await response.json().catch(() => ({}))) as { error?: string };
@@ -758,13 +770,18 @@ export type OfficeSheetAiCapability =
   | 'sheet_write_formula'
   | 'sheet_explain_formula'
   | 'sheet_summarize_range'
-  | 'sheet_fix_error';
+  | 'sheet_fix_error'
+  | 'sheet_freeform';
 
 export interface RunSheetAiCapabilityInput {
   capability: OfficeSheetAiCapability;
   address: string;
   rangeText?: string;
   intent?: string;
+  /** Only meaningful (and only ever SENT) for `sheet_freeform` — mirrors
+   * `RunAiCapabilityInput.prompt`'s contract exactly (DRY intent, same
+   * backend control on the other route). */
+  prompt?: string;
 }
 
 /** A `formula` proposal names the ADDRESS it is for and the raw formula
@@ -828,15 +845,19 @@ export const officeSheetApi = {
   },
 
   async runAiCapability(nodeId: string, input: RunSheetAiCapabilityInput): Promise<OfficeSheetAiProposal> {
+    const body: Record<string, unknown> = {
+      capability: input.capability,
+      address: input.address,
+      range: input.rangeText,
+      intent: input.intent || '',
+    };
+    // Same "prompt key only exists on the wire for the freeform id" control
+    // as `officeDocApi.runAiCapability` above.
+    if (input.capability === 'sheet_freeform') body.prompt = input.prompt || '';
     const response = await fetch(`${API}/sheets/${nodeId}/ai`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        capability: input.capability,
-        address: input.address,
-        range: input.rangeText,
-        intent: input.intent || '',
-      }),
+      body: JSON.stringify(body),
     });
     if (response.status === 403) {
       const body = (await response.json().catch(() => ({}))) as { error?: string };

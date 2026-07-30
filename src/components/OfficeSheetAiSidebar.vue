@@ -61,6 +61,32 @@
             {{ $t(`office.sheet.ai.capability.${capability.id}`) }}
           </button>
         </div>
+
+        <div class="office-sheet-ai-freeform">
+          <label
+            class="office-sheet-ai-prompt-label"
+            for="office-sheet-ai-prompt-input"
+          >
+            {{ $t('office.sheet.ai.promptLabel') }}
+          </label>
+          <textarea
+            id="office-sheet-ai-prompt-input"
+            v-model="promptText"
+            class="vbwd-input office-sheet-ai-prompt-input"
+            data-testid="office-sheet-ai-prompt-input"
+            rows="3"
+            :placeholder="$t('office.sheet.ai.promptPlaceholder')"
+          />
+          <button
+            type="button"
+            class="vbwd-btn vbwd-btn--primary vbwd-btn--sm"
+            data-testid="office-sheet-ai-prompt-run"
+            :disabled="running || promptText.trim() === ''"
+            @click="onRunFreeform"
+          >
+            {{ $t('office.sheet.ai.promptRun') }}
+          </button>
+        </div>
       </template>
 
       <div
@@ -152,14 +178,22 @@ const props = defineProps<{
   proposal: OfficeSheetAiProposal | null;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   'toggle-enabled': [enabled: boolean];
   'run-capability': [capability: OfficeSheetAiCapability, intent: string];
+  'run-freeform': [prompt: string];
   accept: [];
   discard: [];
 }>();
 
 const intentText = ref('');
+const promptText = ref('');
+
+function onRunFreeform(): void {
+  const trimmedPrompt = promptText.value.trim();
+  if (!trimmedPrompt) return;
+  emit('run-freeform', trimmedPrompt);
+}
 
 const capabilities = computed(() =>
   ALL_CAPABILITIES.map((id) => {
@@ -219,6 +253,20 @@ const capabilities = computed(() =>
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
+}
+.office-sheet-ai-freeform {
+  margin-bottom: 12px;
+}
+.office-sheet-ai-prompt-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--vbwd-color-text-secondary, #666);
+  margin-bottom: 4px;
+}
+.office-sheet-ai-prompt-input {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 6px;
 }
 .office-sheet-ai-running,
 .office-sheet-ai-error {

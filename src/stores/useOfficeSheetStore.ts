@@ -443,7 +443,14 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
 
   async function runAiCapability(
     capability: OfficeSheetAiCapability,
-    params: { address: string; rangeText?: string; intent?: string },
+    params: {
+      address: string;
+      rangeText?: string;
+      intent?: string;
+      /** Only meaningful for `sheet_freeform` — mirrors
+       * `useOfficeDocStore.runAiCapability`'s `prompt` param. */
+      prompt?: string;
+    },
   ): Promise<void> {
     if (!nodeId.value) return;
     aiRunning.value = true;

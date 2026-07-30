@@ -198,6 +198,10 @@ export const useOfficeDocStore = defineStore('officeDoc', () => {
       contextBefore?: string;
       contextAfter?: string;
       targetLanguage?: string;
+      /** Only meaningful for the `freeform` capability — see
+       * `officeDocApi.runAiCapability`'s docstring for the "only ever sent
+       * for freeform" contract this forwards untouched. */
+      prompt?: string;
     },
   ): Promise<void> {
     if (!nodeId.value) return;

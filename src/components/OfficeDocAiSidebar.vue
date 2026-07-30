@@ -46,6 +46,32 @@
         </button>
       </div>
 
+      <div class="office-doc-ai-freeform">
+        <label
+          class="office-doc-ai-prompt-label"
+          for="office-doc-ai-prompt-input"
+        >
+          {{ $t('office.ai.promptLabel') }}
+        </label>
+        <textarea
+          id="office-doc-ai-prompt-input"
+          v-model="promptText"
+          class="vbwd-input office-doc-ai-prompt-input"
+          data-testid="office-doc-ai-prompt-input"
+          rows="3"
+          :placeholder="$t('office.ai.promptPlaceholder')"
+        />
+        <button
+          type="button"
+          class="vbwd-btn vbwd-btn--primary vbwd-btn--sm"
+          data-testid="office-doc-ai-prompt-run"
+          :disabled="running || promptText.trim() === ''"
+          @click="onRunFreeform"
+        >
+          {{ $t('office.ai.promptRun') }}
+        </button>
+      </div>
+
       <div
         v-if="running"
         class="office-doc-ai-running"
@@ -94,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { OfficeAiCapability } from '../api/officeApi';
 
 const CAPABILITIES_REQUIRING_SELECTION: OfficeAiCapability[] = [
@@ -128,9 +154,10 @@ defineProps<{
   proposal: { capability: OfficeAiCapability; proposedText: string } | null;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   'toggle-enabled': [enabled: boolean];
   'run-capability': [capability: OfficeAiCapability];
+  'run-freeform': [prompt: string];
   accept: [];
   discard: [];
 }>();
@@ -141,6 +168,14 @@ const capabilities = computed(() =>
     requiresSelection: CAPABILITIES_REQUIRING_SELECTION.includes(id),
   })),
 );
+
+const promptText = ref('');
+
+function onRunFreeform(): void {
+  const trimmedPrompt = promptText.value.trim();
+  if (!trimmedPrompt) return;
+  emit('run-freeform', trimmedPrompt);
+}
 </script>
 
 <style scoped>
@@ -179,6 +214,20 @@ const capabilities = computed(() =>
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
+}
+.office-doc-ai-freeform {
+  margin-bottom: 12px;
+}
+.office-doc-ai-prompt-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--vbwd-color-text-secondary, #666);
+  margin-bottom: 4px;
+}
+.office-doc-ai-prompt-input {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 6px;
 }
 .office-doc-ai-running,
 .office-doc-ai-error {

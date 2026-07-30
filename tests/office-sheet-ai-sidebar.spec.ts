@@ -75,6 +75,41 @@ describe('OfficeSheetAiSidebar', () => {
     expect(wrapper.emitted('run-capability')?.[0]).toEqual(['sheet_write_formula', 'total column A']);
   });
 
+  it('renders the freeform prompt alongside the four preset capabilities', () => {
+    const wrapper = mountSidebar();
+    expect(wrapper.find('[data-testid="office-sheet-ai-prompt-input"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="office-sheet-ai-prompt-run"]').exists()).toBe(true);
+  });
+
+  it('the freeform Run button stays enabled for a view-only share once a prompt is typed — unlike the statically-gated formula-producing presets, whose access check is only known once the reply is back', async () => {
+    const wrapper = mountSidebar({ canProposeFormula: false });
+    await wrapper.get('[data-testid="office-sheet-ai-prompt-input"]').setValue('what does column B represent?');
+    expect(wrapper.get('[data-testid="office-sheet-ai-prompt-run"]').attributes('disabled')).toBeUndefined();
+    // The formula-producing presets stay disabled without edit access, as before.
+    expect(
+      wrapper.get('[data-testid="office-sheet-ai-capability-sheet_write_formula"]').attributes('disabled'),
+    ).toBeDefined();
+  });
+
+  it('disables the freeform Run button until a prompt is typed, and emits it when clicked', async () => {
+    const wrapper = mountSidebar();
+    expect(wrapper.get('[data-testid="office-sheet-ai-prompt-run"]').attributes('disabled')).toBeDefined();
+
+    await wrapper
+      .get('[data-testid="office-sheet-ai-prompt-input"]')
+      .setValue('add a column that is column B times 2');
+    expect(wrapper.get('[data-testid="office-sheet-ai-prompt-run"]').attributes('disabled')).toBeUndefined();
+
+    await wrapper.get('[data-testid="office-sheet-ai-prompt-run"]').trigger('click');
+    expect(wrapper.emitted('run-freeform')?.[0]).toEqual(['add a column that is column B times 2']);
+  });
+
+  it('a whitespace-only prompt never emits run-freeform', async () => {
+    const wrapper = mountSidebar();
+    await wrapper.get('[data-testid="office-sheet-ai-prompt-input"]').setValue('   ');
+    expect(wrapper.get('[data-testid="office-sheet-ai-prompt-run"]').attributes('disabled')).toBeDefined();
+  });
+
   it('running shows the running indicator', () => {
     const wrapper = mountSidebar({ running: true });
     expect(wrapper.find('[data-testid="office-sheet-ai-running"]').exists()).toBe(true);

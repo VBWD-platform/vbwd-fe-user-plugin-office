@@ -513,6 +513,7 @@
           :proposal="store.aiProposal"
           @toggle-enabled="onToggleAi"
           @run-capability="onRunAiCapability"
+          @run-freeform="onRunAiFreeform"
           @accept="onAcceptAiProposal"
           @discard="store.clearAiProposal()"
         />
@@ -1182,6 +1183,15 @@ async function onRunAiCapability(capability: OfficeSheetAiCapability, intent: st
     address: activeAddressLabel.value,
     rangeText: selectionRangeText.value ?? undefined,
     intent,
+  });
+}
+
+async function onRunAiFreeform(prompt: string): Promise<void> {
+  if (!activeCell.value) return;
+  await store.runAiCapability('sheet_freeform', {
+    address: activeAddressLabel.value,
+    rangeText: selectionRangeText.value ?? undefined,
+    prompt,
   });
 }
 

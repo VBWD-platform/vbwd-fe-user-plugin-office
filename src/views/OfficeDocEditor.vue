@@ -122,6 +122,7 @@
           :proposal="store.aiProposal"
           @toggle-enabled="onToggleAi"
           @run-capability="onRunCapability"
+          @run-freeform="onRunFreeform"
           @accept="onAcceptProposal"
           @discard="store.clearAiProposal()"
         />
@@ -288,6 +289,20 @@ async function onRunCapability(capability: OfficeAiCapability, targetLanguage?: 
     contextBefore: before,
     contextAfter: after,
     targetLanguage,
+  });
+}
+
+async function onRunFreeform(prompt: string): Promise<void> {
+  if (!editor.value) return;
+  const { from, to } = editor.value.state.selection;
+  const selectionText = editor.value.state.doc.textBetween(from, to, '\n', '\n');
+  const { before, after } = textWindow(from, to);
+  aiPatchRange = { from, to };
+  await store.runAiCapability('freeform', {
+    selectionText,
+    contextBefore: before,
+    contextAfter: after,
+    prompt,
   });
 }
 

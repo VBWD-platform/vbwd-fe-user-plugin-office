@@ -229,6 +229,29 @@ describe('useOfficeDocStore', () => {
     store.stopPolling();
   });
 
+  it('runAiCapability forwards a prompt through to officeDocApi for freeform', async () => {
+    mockGetDoc.mockResolvedValue(docView({ document: { ...docView().document, ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      capability: 'freeform',
+      connection_slug: 'default',
+      proposed_text: '- point one\n- point two',
+    });
+    const store = useOfficeDocStore();
+    await store.load('doc-1');
+
+    await store.runAiCapability('freeform', {
+      selectionText: 'The quick brown fox',
+      prompt: 'rewrite this as bullet points',
+    });
+
+    expect(mockRunAiCapability).toHaveBeenCalledWith(
+      'doc-1',
+      expect.objectContaining({ capability: 'freeform', prompt: 'rewrite this as bullet points' }),
+    );
+    expect(store.aiProposal).toEqual({ capability: 'freeform', proposedText: '- point one\n- point two' });
+    store.stopPolling();
+  });
+
   it('runAiCapability maps a forbidden error to a translation key, not a raw message', async () => {
     mockGetDoc.mockResolvedValue(docView());
     mockRunAiCapability.mockRejectedValue(new FakeOfficeAiForbiddenError('nope'));

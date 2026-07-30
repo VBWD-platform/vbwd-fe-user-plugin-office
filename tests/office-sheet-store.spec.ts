@@ -375,6 +375,32 @@ describe('useOfficeSheetStore — AI helper', () => {
     store.stopPolling();
   });
 
+  it('runAiCapability forwards a prompt through to officeSheetApi for sheet_freeform', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      kind: 'formula',
+      capability: 'sheet_freeform',
+      connection_slug: 'default',
+      address: 'B1',
+      formula: '=B1*2',
+    });
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+
+    await store.runAiCapability('sheet_freeform', {
+      address: 'B1',
+      prompt: 'add a column that is column B times 2',
+    });
+
+    expect(mockRunAiCapability).toHaveBeenCalledWith('sheet-1', {
+      capability: 'sheet_freeform',
+      address: 'B1',
+      prompt: 'add a column that is column B times 2',
+    });
+    expect(store.aiProposal?.formula).toBe('=B1*2');
+    store.stopPolling();
+  });
+
   it('runAiCapability maps a forbidden error onto a translatable key', async () => {
     mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
     mockRunAiCapability.mockRejectedValue(new FakeOfficeAiForbiddenError('nope'));

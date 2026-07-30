@@ -206,6 +206,9 @@
       "discard": "Verwerfen",
       "forbidden": "Der KI-Assistent ist für dieses Dokument nicht verfügbar.",
       "budgetExceeded": "Das monatliche KI-Assistent-Budget wurde aufgebraucht.",
+      "promptLabel": "Oder beschreiben Sie, was Sie möchten",
+      "promptPlaceholder": "z. B. dies als drei Stichpunkte umschreiben",
+      "promptRun": "Ausführen",
       "capability": {
         "continue_writing": "Weiterschreiben",
         "rewrite_shorter": "Kürzer machen",
@@ -271,6 +274,9 @@
         "discard": "Verwerfen",
         "forbidden": "Der KI-Assistent ist für diese Tabelle nicht verfügbar.",
         "budgetExceeded": "Das monatliche KI-Assistent-Budget wurde aufgebraucht.",
+        "promptLabel": "Oder beschreiben Sie, was Sie möchten",
+        "promptPlaceholder": "z. B. eine Spalte hinzufügen, die Spalte B mal 2 ist",
+        "promptRun": "Ausführen",
         "proposedFormulaLabel": "Vorgeschlagene Formel für",
         "capability": {
           "sheet_write_formula": "Formel schreiben",

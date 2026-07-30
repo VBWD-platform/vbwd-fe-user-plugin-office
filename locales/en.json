@@ -206,6 +206,9 @@
       "discard": "Discard",
       "forbidden": "The AI helper is not available for this document.",
       "budgetExceeded": "The monthly AI helper budget has been used up.",
+      "promptLabel": "Or describe what you want",
+      "promptPlaceholder": "e.g. rewrite this as three bullet points",
+      "promptRun": "Run",
       "capability": {
         "continue_writing": "Continue writing",
         "rewrite_shorter": "Make shorter",
@@ -271,6 +274,9 @@
         "discard": "Discard",
         "forbidden": "The AI helper is not available for this spreadsheet.",
         "budgetExceeded": "The monthly AI helper budget has been used up.",
+        "promptLabel": "Or describe what you want",
+        "promptPlaceholder": "e.g. add a column that is column B times 2",
+        "promptRun": "Run",
         "proposedFormulaLabel": "Proposed formula for",
         "capability": {
           "sheet_write_formula": "Write formula",

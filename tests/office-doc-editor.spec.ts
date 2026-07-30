@@ -27,6 +27,13 @@ vi.mock('../src/api/officeApi', () => ({
   OfficeAiBudgetExceededError: class extends Error {},
 }));
 
+// OfficeDocEditor calls `useI18n()` for the editor placeholder, which needs the
+// string in script scope where the template-only `$t` is unavailable. The real
+// plugin is installed by the app; mount tests supply it directly.
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+}));
+
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { id: 'doc-1' } }),
 }));
@@ -185,6 +192,81 @@ describe('OfficeDocEditor — i18n', () => {
 
     expect(wrapper.get('[data-testid="office-doc-save-status"]').text()).toBe(
       'translated:office.doc.saved',
+    );
+  });
+});
+
+/**
+ * The reported symptom was "I don't see a cursor — I cannot edit". The document
+ * was fine: it was an EMPTY doc with no caret and no placeholder, which is
+ * visually indistinguishable from a read-only one. These pin both halves of the
+ * fix, plus the unhelpful raw-404 message that sent the diagnosis the wrong way.
+ */
+describe('OfficeDocEditor — an empty document must look editable', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    mockAcquireLease.mockResolvedValue({
+      held: true, holder_user_id: 'me', is_self: true, granted: true,
+      expires_at: '2026-07-30T00:01:30Z',
+    });
+    mockPresence.mockResolvedValue({
+      held: false, holder_user_id: null, is_self: false, granted: true, expires_at: null,
+    });
+  });
+
+  it('autofocuses the editor when the document is editable', async () => {
+    mockGetDoc.mockResolvedValue(baseDocView());
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    // Tiptap resolves `autofocus` into its own options; asserting on the option
+    // keeps this independent of jsdom's incomplete focus emulation.
+    expect((wrapper.vm as unknown as { editor: { options: { autofocus: unknown } } }).editor
+      .options.autofocus).toBe('end');
+  });
+
+  it('does NOT autofocus a document the user cannot edit', async () => {
+    mockGetDoc.mockResolvedValue(baseDocView({ access: 'view' }));
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    expect((wrapper.vm as unknown as { editor: { options: { autofocus: unknown } } }).editor
+      .options.autofocus).toBe(false);
+  });
+
+  it('registers a placeholder so an empty document says it is writable', async () => {
+    mockGetDoc.mockResolvedValue(baseDocView());
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    const names = (wrapper.vm as unknown as {
+      editor: { extensionManager: { extensions: Array<{ name: string }> } };
+    }).editor.extensionManager.extensions.map((extension) => extension.name);
+    expect(names).toContain('placeholder');
+  });
+
+  it('renders a human message for a 404 rather than the raw request error', async () => {
+    mockGetDoc.mockRejectedValue(
+      new Error('GET /api/v1/office/docs/ccc16883 failed: 404'),
+    );
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    const text = wrapper.get('[data-testid="office-doc-load-error"]').text();
+    // The identity $t mock returns the key, which is what proves the store
+    // mapped the raw error onto a translatable message at all.
+    expect(text).toBe('office.doc.notFound');
+    expect(text).not.toContain('404');
+  });
+
+  it('passes a non-404 failure through unchanged rather than mislabelling it', async () => {
+    mockGetDoc.mockRejectedValue(new Error('NetworkError: connection refused'));
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="office-doc-load-error"]').text()).toContain(
+      'connection refused',
     );
   });
 });

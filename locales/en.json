@@ -191,7 +191,9 @@
         "exportPdf": "PDF (.pdf)",
         "exportDocx": "Word (.docx)",
         "exportMarkdown": "Markdown (.md)"
-      }
+      },
+      "placeholder": "Start typing…",
+      "notFound": "This document is not available to the account you are signed in as. It may have been deleted, or it belongs to another user."
     },
     "ai": {
       "title": "AI helper",

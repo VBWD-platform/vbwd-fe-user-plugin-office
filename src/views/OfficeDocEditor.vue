@@ -51,7 +51,7 @@
       class="office-doc-error"
       data-testid="office-doc-load-error"
     >
-      {{ store.loadError }}
+      {{ store.loadError?.startsWith('office.') ? $t(store.loadError) : store.loadError }}
     </div>
 
     <template v-else>
@@ -140,9 +140,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { Editor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
+import { Placeholder } from '@tiptap/extensions';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import { officeApi, type OfficeAiCapability, type OfficeVersion } from '../api/officeApi';
 import { useOfficeDocStore } from '../stores/useOfficeDocStore';
@@ -159,6 +161,9 @@ const AI_CONTEXT_WINDOW_CHARS = 800;
 
 const route = useRoute();
 const store = useOfficeDocStore();
+// The Placeholder extension needs the string in SCRIPT scope, where `$t` (a
+// template-only helper) is unavailable.
+const { t: translate } = useI18n();
 
 // shallowRef, not ref — Editor is a mutable class instance managing its own
 // internal (ProseMirror) reactivity; deep-reactive-wrapping it is both
@@ -214,8 +219,16 @@ function buildEditor(): void {
   editor.value = new Editor({
     content: store.content || undefined,
     editable: isEditable.value,
+    // Put the caret in the document as soon as it opens, when the user may
+    // actually type. Without this an empty Doc renders as a blank area with no
+    // caret and no hint — indistinguishable from a read-only document, which is
+    // precisely how it got reported as "I cannot edit".
+    autofocus: isEditable.value ? 'end' : false,
     extensions: [
       StarterKit.configure({ link: { openOnClick: false } }),
+      // The other half of the same problem: an empty document needs to SAY it is
+      // empty and writable, rather than looking like nothing is there.
+      Placeholder.configure({ placeholder: () => translate('office.doc.placeholder') }),
       // Only fontFamily/fontSize — color/backgroundColor/lineHeight stay
       // OFF: doc_content.py's `_validate_text_style_attrs` allow-lists just
       // those two keys on a `textStyle` mark (a CSS-injection surface into
@@ -393,7 +406,35 @@ onBeforeUnmount(() => {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  /* The editor must fill this pane, not just its own text. An empty document's
+     .ProseMirror is one line tall, so every click below that line landed on dead
+     space and did nothing — the page looked un-editable even though the caret
+     was one line up. `display: flex` + a stretched child makes the whole white
+     area the click target, the way a document editor is expected to behave. */
+  display: flex;
+  flex-direction: column;
 }
+.office-doc-content :deep(.ProseMirror) {
+  flex: 1;
+  /* Enough height to be an obvious target even in a short viewport. */
+  min-height: 320px;
+  /* The caret already shows focus; a full-width outline made the empty document
+     look like a single-line input field. */
+  outline: none;
+}
+/* The Placeholder extension only ADDS `data-placeholder` + `is-editor-empty`;
+   rendering it is ours. Without this rule the attribute is present and nothing
+   is visible — which is the state that made an empty document look read-only.
+   `:deep` is required: ProseMirror generates this node, so a scoped selector
+   cannot reach it. */
+.office-doc-content :deep(p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--vbwd-color-text-secondary, #6b7684);
+}
+
 .office-doc-content :deep(table) {
   border-collapse: collapse;
   width: 100%;

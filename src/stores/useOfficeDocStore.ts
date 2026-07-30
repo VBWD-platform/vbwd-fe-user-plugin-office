@@ -68,7 +68,15 @@ export const useOfficeDocStore = defineStore('officeDoc', () => {
       startPresencePolling();
       startLeaseHeartbeat();
     } catch (caught) {
-      loadError.value = (caught as Error).message;
+      // A raw "GET /api/v1/office/docs/<uuid> failed: 404" is not a message for
+      // a person. A 404 here has ONE meaning worth conveying: this document is
+      // not available to the account you are signed in as — because it does not
+      // exist, or because it belongs to someone else (the API answers 404 rather
+      // than 403 on purpose, so it cannot disclose which).
+      const message = (caught as Error).message || '';
+      loadError.value = /\b404\b/.test(message)
+        ? 'office.doc.notFound'
+        : message;
     } finally {
       loading.value = false;
     }

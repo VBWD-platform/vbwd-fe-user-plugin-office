@@ -127,3 +127,68 @@ test('VBWD Docs — formatting, image reload persistence, table import, PDF expo
 
   expect(pageErrors, `uncaught page errors: ${pageErrors.join(' | ')}`).toEqual([]);
 });
+
+
+/**
+ * The reported bug: "I don't see a cursor, I cannot edit."
+ *
+ * The document and the API were both fine. An EMPTY doc rendered a .ProseMirror
+ * only one line tall, so every click in the large white area below it landed on
+ * dead space and did nothing — and with no placeholder and no autofocus there was
+ * no caret to see either. All three read as "this document is read-only".
+ *
+ * This lives in E2E rather than a unit test on purpose: it is a LAYOUT property,
+ * and jsdom has no layout engine, so a mounted-component test cannot see it.
+ */
+test('an empty document is editable across its whole pane, with a caret and a placeholder', async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await page.goto('/login');
+  await page.fill('[data-testid="email"]', 'test@example.com');
+  await page.fill('[data-testid="password"]', 'TestPass123@');
+  await page.click('[data-testid="login-button"]');
+  await page.waitForURL('**/dashboard');
+
+  const created = await page.evaluate(async () => {
+    const token = localStorage.getItem('auth_token') || '';
+    const response = await fetch('/api/v1/office/docs', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `Cursor-probe-${Date.now()}`, parent_id: null }),
+    });
+    return response.json();
+  });
+  await page.goto(`/dashboard/office/doc/${created.id}`, { waitUntil: 'networkidle' });
+  await expect(page.locator('.ProseMirror')).toBeVisible({ timeout: 20000 });
+
+  // 1. A caret is present without the user hunting for it.
+  await expect(page.locator('.ProseMirror')).toBeFocused();
+
+  // 2. An empty document says it is writable.
+  await expect(page.locator('.ProseMirror p.is-editor-empty')).toHaveAttribute(
+    'data-placeholder',
+    /.+/,
+  );
+
+  // 3. The editable region fills the pane rather than being one line tall.
+  const editorBox = await page.locator('.ProseMirror').boundingBox();
+  expect(editorBox!.height).toBeGreaterThan(200);
+
+  // 4. Clicking far below the first line still puts the caret in the document.
+  await page.mouse.click(
+    editorBox!.x + editorBox!.width / 2,
+    editorBox!.y + Math.min(220, editorBox!.height - 20),
+  );
+  await page.keyboard.type('typed after clicking low');
+  await expect(page.locator('.ProseMirror')).toContainText('typed after clicking low');
+
+  // Self-clean, like every other spec here.
+  await page.evaluate(async (id) => {
+    const token = localStorage.getItem('auth_token') || '';
+    await fetch(`/api/v1/office/nodes/${id}?purge=true`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }, created.id);
+});

@@ -3,8 +3,12 @@ import { ref } from 'vue';
 import {
   officeDocApi,
   officeSheetApi,
+  OfficeAiBudgetExceededError,
+  OfficeAiForbiddenError,
   OfficeDocConflictError,
   type OfficeDocLeaseState,
+  type OfficeSheetAiCapability,
+  type OfficeSheetAiProposal,
   type OfficeSheetCellChange,
   type OfficeSheetCellModel,
   type OfficeSheetCellStyle,
@@ -71,6 +75,7 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
   const access = ref<OfficeSheetView['access'] | null>(null);
   const lease = ref<OfficeDocLeaseState | null>(null);
   const activeSheetName = ref('');
+  const aiEnabled = ref(false);
 
   const loading = ref(false);
   const loadError = ref<string | null>(null);
@@ -78,6 +83,10 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
   const dirty = ref(false);
   const conflict = ref<OfficeSheetConflictKind>(null);
   const importReport = ref<OfficeSheetImportResult['unmapped_formulas']>([]);
+
+  const aiRunning = ref(false);
+  const aiError = ref<string | null>(null);
+  const aiProposal = ref<OfficeSheetAiProposal | null>(null);
 
   const pendingChanges = new Map<string, OfficeSheetCellChange>();
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -112,6 +121,7 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
     access.value = view.access;
     lease.value = view.lease;
     activeSheetName.value = view.workbook.active_sheet || view.workbook.sheets[0]?.name || '';
+    aiEnabled.value = view.document.ai_enabled;
     conflict.value = null;
   }
 
@@ -404,6 +414,104 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
     importReport.value = [];
   }
 
+  // ------------------------------------------------------------------
+  // S147-3.5 — AI helper. Mirrors `useOfficeDocStore`'s shape (same error
+  // classes, same running/error/proposal state); the Sheet-specific part is
+  // ONLY the accept step, which routes through `saveCells` — the ONE place a
+  // formula is parsed/validated/recalculated — never writes `aiProposal`'s
+  // text straight into the model.
+  // ------------------------------------------------------------------
+
+  /** Owner-only, mirrors `officeDocApi.saveDoc`'s `aiEnabled` toggle: an
+   * empty `changes` list is allowed ONLY because `aiEnabled` is passed
+   * (the backend enforces `changes` non-empty otherwise). */
+  async function toggleAi(enabled: boolean): Promise<void> {
+    if (!nodeId.value || !canEdit()) return;
+    try {
+      const result = await officeSheetApi.saveCells(nodeId.value, [], versionNo.value, enabled);
+      versionNo.value = result.version_no;
+      aiEnabled.value = enabled;
+      conflict.value = null;
+    } catch (caught) {
+      if (caught instanceof OfficeDocConflictError) {
+        conflict.value = caught.kind;
+        return;
+      }
+      throw caught;
+    }
+  }
+
+  async function runAiCapability(
+    capability: OfficeSheetAiCapability,
+    params: { address: string; rangeText?: string; intent?: string },
+  ): Promise<void> {
+    if (!nodeId.value) return;
+    aiRunning.value = true;
+    aiError.value = null;
+    aiProposal.value = null;
+    try {
+      aiProposal.value = await officeSheetApi.runAiCapability(nodeId.value, {
+        capability,
+        ...params,
+      });
+    } catch (caught) {
+      if (caught instanceof OfficeAiForbiddenError) {
+        aiError.value = 'office.sheet.ai.forbidden';
+      } else if (caught instanceof OfficeAiBudgetExceededError) {
+        aiError.value = 'office.sheet.ai.budgetExceeded';
+      } else {
+        aiError.value = (caught as Error).message;
+      }
+    } finally {
+      aiRunning.value = false;
+    }
+  }
+
+  function clearAiProposal(): void {
+    aiProposal.value = null;
+    aiError.value = null;
+  }
+
+  /** Accept the current proposal. A `text` proposal (explain/summarise) has
+   * nothing to apply — accepting it just acknowledges/dismisses it, exactly
+   * like discarding it. A `formula` proposal is ALWAYS sent through the
+   * `formula` slot of a `saveCells` change (never the bare-value slot
+   * `changeFromRawInput` would pick for text with no leading `=`), so a
+   * model reply that is not even formula-shaped still goes through the
+   * engine's parser and degrades to an error VALUE on the cell, exactly
+   * like a human's bad formula — never silently written as a literal
+   * string. */
+  async function acceptAiProposal(): Promise<boolean> {
+    const proposal = aiProposal.value;
+    if (!proposal) return false;
+    if (proposal.kind !== 'formula') {
+      clearAiProposal();
+      return true;
+    }
+    if (!proposal.address || proposal.formula === undefined) return false;
+    if (!nodeId.value || !canEdit()) return false;
+    const formulaText = proposal.formula.startsWith('=') ? proposal.formula : `=${proposal.formula}`;
+    const change: OfficeSheetCellChange = {
+      sheet: activeSheetName.value,
+      address: proposal.address,
+      formula: formulaText,
+    };
+    applyLocalEcho(activeSheetName.value, proposal.address, change);
+    try {
+      const result = await officeSheetApi.saveCells(nodeId.value, [change], versionNo.value);
+      applySaveResult(result);
+      conflict.value = null;
+      clearAiProposal();
+      return true;
+    } catch (caught) {
+      if (caught instanceof OfficeDocConflictError) {
+        conflict.value = caught.kind;
+        return false;
+      }
+      throw caught;
+    }
+  }
+
   async function acquireLease(): Promise<void> {
     if (!nodeId.value) return;
     try {
@@ -476,12 +584,14 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
     access.value = null;
     lease.value = null;
     activeSheetName.value = '';
+    aiEnabled.value = false;
     loading.value = false;
     loadError.value = null;
     saving.value = false;
     dirty.value = false;
     conflict.value = null;
     importReport.value = [];
+    clearAiProposal();
   }
 
   return {
@@ -492,12 +602,16 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
     access,
     lease,
     activeSheetName,
+    aiEnabled,
     loading,
     loadError,
     saving,
     dirty,
     conflict,
     importReport,
+    aiRunning,
+    aiError,
+    aiProposal,
     canEdit,
     getSheetTab,
     getCell,
@@ -520,6 +634,10 @@ export const useOfficeSheetStore = defineStore('officeSheet', () => {
     exportWorkbook,
     importWorkbook,
     clearImportReport,
+    toggleAi,
+    runAiCapability,
+    clearAiProposal,
+    acceptAiProposal,
     acquireLease,
     releaseLease,
     refreshPresence,

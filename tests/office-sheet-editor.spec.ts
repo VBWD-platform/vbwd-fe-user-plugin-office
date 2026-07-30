@@ -10,6 +10,7 @@ const mockImportWorkbook = vi.fn();
 const mockAcquireLease = vi.fn();
 const mockReleaseLease = vi.fn();
 const mockPresence = vi.fn();
+const mockRunAiCapability = vi.fn();
 
 vi.mock('../src/api/officeApi', () => ({
   officeSheetApi: {
@@ -19,6 +20,7 @@ vi.mock('../src/api/officeApi', () => ({
     recalc: (...args: unknown[]) => mockRecalc(...args),
     exportWorkbook: (...args: unknown[]) => mockExportWorkbook(...args),
     importWorkbook: (...args: unknown[]) => mockImportWorkbook(...args),
+    runAiCapability: (...args: unknown[]) => mockRunAiCapability(...args),
   },
   officeDocApi: {
     acquireLease: (...args: unknown[]) => mockAcquireLease(...args),
@@ -26,6 +28,8 @@ vi.mock('../src/api/officeApi', () => ({
     presence: (...args: unknown[]) => mockPresence(...args),
   },
   OfficeDocConflictError: class extends Error {},
+  OfficeAiForbiddenError: class extends Error {},
+  OfficeAiBudgetExceededError: class extends Error {},
 }));
 
 vi.mock('vue-router', () => ({
@@ -227,6 +231,120 @@ describe('OfficeSheetEditor', () => {
 
     expect(mockRecalc).toHaveBeenCalledWith('sheet-1');
     expect(wrapper.text()).toContain('100');
+    wrapper.unmount();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S147-3.5 — the Sheet AI helper panel.
+// ---------------------------------------------------------------------------
+
+describe('OfficeSheetEditor — AI helper panel', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    mockAcquireLease.mockResolvedValue({
+      held: true, holder_user_id: 'me', is_self: true, granted: true,
+      expires_at: '2026-07-28T00:01:30Z',
+    });
+    mockPresence.mockResolvedValue({
+      held: false, holder_user_id: null, is_self: false, granted: true, expires_at: null,
+    });
+  });
+
+  it('toggling the AI panel reveals the AI sidebar testid', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="office-sheet-ai-sidebar"]').exists()).toBe(false);
+    await wrapper.find('[data-testid="office-sheet-ai-toggle-panel"]').trigger('click');
+    expect(wrapper.find('[data-testid="office-sheet-ai-sidebar"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('running a capability sends the active cell address (and the AI-disabled hint before that)', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      kind: 'text',
+      capability: 'sheet_explain_formula',
+      connection_slug: 'default',
+      text: 'It adds one to A1.',
+    });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.find('[data-testid="office-sheet-ai-toggle-panel"]').trigger('click');
+
+    const cells = wrapper.findAll('[data-testid="office-sheet-cell"]');
+    await cells[1].trigger('mousedown', { button: 0 }); // B1
+
+    await wrapper
+      .find('[data-testid="office-sheet-ai-capability-sheet_explain_formula"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(mockRunAiCapability).toHaveBeenCalledWith('sheet-1', {
+      capability: 'sheet_explain_formula',
+      address: 'B1',
+      rangeText: 'B1',
+      intent: '',
+    });
+    expect(wrapper.get('[data-testid="office-sheet-ai-proposal-text"]').text()).toBe('It adds one to A1.');
+    wrapper.unmount();
+  });
+
+  it('accepting a formula proposal applies it through saveCells and the cell shows the computed value', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      kind: 'formula',
+      capability: 'sheet_write_formula',
+      connection_slug: 'default',
+      address: 'B1',
+      formula: '=A1+1',
+    });
+    mockSaveCells.mockResolvedValue({ version_no: 2, changes: { 'Sheet1!B1': 43 } });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.find('[data-testid="office-sheet-ai-toggle-panel"]').trigger('click');
+
+    const cells = wrapper.findAll('[data-testid="office-sheet-cell"]');
+    await cells[1].trigger('mousedown', { button: 0 }); // B1
+
+    await wrapper.find('[data-testid="office-sheet-ai-intent-input"]').setValue('add one to A1');
+    await wrapper
+      .find('[data-testid="office-sheet-ai-capability-sheet_write_formula"]')
+      .trigger('click');
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-sheet-ai-accept"]').trigger('click');
+    await flushPromises();
+
+    expect(mockSaveCells).toHaveBeenCalledWith(
+      'sheet-1',
+      [{ sheet: 'Sheet1', address: 'B1', formula: '=A1+1' }],
+      1,
+    );
+    expect(wrapper.find('[data-testid="office-sheet-ai-proposal"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('a view-only share sees the explain capability enabled but the formula ones disabled', async () => {
+    mockGetSheet.mockResolvedValue(
+      sheetView({ access: 'view', document: { ai_enabled: true } }),
+    );
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.find('[data-testid="office-sheet-ai-toggle-panel"]').trigger('click');
+
+    const cells = wrapper.findAll('[data-testid="office-sheet-cell"]');
+    await cells[1].trigger('mousedown', { button: 0 }); // B1
+
+    expect(
+      wrapper.get('[data-testid="office-sheet-ai-capability-sheet_write_formula"]').attributes('disabled'),
+    ).toBeDefined();
+    expect(
+      wrapper.get('[data-testid="office-sheet-ai-capability-sheet_explain_formula"]').attributes('disabled'),
+    ).toBeUndefined();
     wrapper.unmount();
   });
 });

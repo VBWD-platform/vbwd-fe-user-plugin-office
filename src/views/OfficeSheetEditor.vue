@@ -45,6 +45,14 @@
           data-testid="office-sheet-import-input"
           @change="onImportInputChange"
         >
+        <button
+          type="button"
+          class="vbwd-btn vbwd-btn--ghost vbwd-btn--sm"
+          data-testid="office-sheet-ai-toggle-panel"
+          @click="showAiSidebar = !showAiSidebar"
+        >
+          {{ $t('office.sheet.ai.title') }}
+        </button>
       </div>
     </header>
 
@@ -132,363 +140,382 @@
         </button>
       </div>
 
-      <div
-        class="office-sheet-formula-bar"
-        data-testid="office-sheet-formula-bar"
-      >
-        <span
-          class="office-sheet-formula-bar-address"
-          data-testid="office-sheet-formula-bar-address"
-        >{{ activeAddressLabel }}</span>
-        <input
-          ref="formulaBarInputRef"
-          v-model="formulaBarValue"
-          type="text"
-          class="vbwd-input office-sheet-formula-bar-input"
-          data-testid="office-sheet-formula-bar-input"
-          :placeholder="$t('office.sheet.formulaBarPlaceholder')"
-          :disabled="!activeCell || !store.canEdit()"
-          @focus="formulaBarFocused = true"
-          @blur="formulaBarFocused = false"
-          @keydown.enter="commitFormulaBar"
-          @keydown.escape="cancelFormulaBarEdit"
-        >
-      </div>
-
-      <div
-        class="office-sheet-toolbar"
-        data-testid="office-sheet-toolbar"
-      >
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          :class="{ 'is-active': isBoldActive }"
-          data-testid="office-sheet-tb-bold"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onToggleBold"
-        >
-          <strong>B</strong>
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          :class="{ 'is-active': isItalicActive }"
-          data-testid="office-sheet-tb-italic"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onToggleItalic"
-        >
-          <em>I</em>
-        </button>
-
-        <span class="office-sheet-toolbar-separator" />
-
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-align-left"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetAlign('left')"
-        >
-          {{ $t('office.sheet.toolbar.alignLeft') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-align-center"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetAlign('center')"
-        >
-          {{ $t('office.sheet.toolbar.alignCenter') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-align-right"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetAlign('right')"
-        >
-          {{ $t('office.sheet.toolbar.alignRight') }}
-        </button>
-
-        <span class="office-sheet-toolbar-separator" />
-
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-format-general"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetFormat('general')"
-        >
-          {{ $t('office.sheet.toolbar.formatGeneral') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-format-number"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetFormat('number')"
-        >
-          {{ $t('office.sheet.toolbar.formatNumber') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-format-currency"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetFormat('currency')"
-        >
-          {{ $t('office.sheet.toolbar.formatCurrency') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-format-percent"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetFormat('percent')"
-        >
-          {{ $t('office.sheet.toolbar.formatPercent') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-format-date"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onSetFormat('date')"
-        >
-          {{ $t('office.sheet.toolbar.formatDate') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-decimals-dec"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onAdjustDecimals(-1)"
-        >
-          .0
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-decimals-inc"
-          :disabled="!store.canEdit() || selectionAddresses.length === 0"
-          @click="onAdjustDecimals(1)"
-        >
-          .00
-        </button>
-
-        <span class="office-sheet-toolbar-separator" />
-
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-merge"
-          :disabled="!store.canEdit() || selectionAddresses.length < 2"
-          @click="onMerge"
-        >
-          {{ $t('office.sheet.toolbar.merge') }}
-        </button>
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-unmerge"
-          :disabled="!store.canEdit() || !activeCell"
-          @click="onUnmerge"
-        >
-          {{ $t('office.sheet.toolbar.unmerge') }}
-        </button>
-
-        <span class="office-sheet-toolbar-separator" />
-
-        <button
-          type="button"
-          class="office-sheet-toolbar-btn"
-          data-testid="office-sheet-tb-print"
-          @click="onPrint"
-        >
-          {{ $t('office.sheet.toolbar.print') }}
-        </button>
-
-        <div class="office-sheet-export-menu">
-          <button
-            type="button"
-            class="office-sheet-toolbar-btn"
-            data-testid="office-sheet-tb-export"
-            @click="exportMenuOpen = !exportMenuOpen"
-          >
-            {{ $t('office.sheet.toolbar.export') }}
-          </button>
+      <div class="office-sheet-workspace">
+        <div class="office-sheet-main-column">
           <div
-            v-if="exportMenuOpen"
-            class="office-sheet-export-menu-list"
-            data-testid="office-sheet-tb-export-menu"
+            class="office-sheet-formula-bar"
+            data-testid="office-sheet-formula-bar"
           >
-            <button
-              type="button"
-              class="office-sheet-export-menu-item"
-              data-testid="office-sheet-tb-export-csv"
-              @click="onExportFormat('csv')"
+            <span
+              class="office-sheet-formula-bar-address"
+              data-testid="office-sheet-formula-bar-address"
+            >{{ activeAddressLabel }}</span>
+            <input
+              ref="formulaBarInputRef"
+              v-model="formulaBarValue"
+              type="text"
+              class="vbwd-input office-sheet-formula-bar-input"
+              data-testid="office-sheet-formula-bar-input"
+              :placeholder="$t('office.sheet.formulaBarPlaceholder')"
+              :disabled="!activeCell || !store.canEdit()"
+              @focus="formulaBarFocused = true"
+              @blur="formulaBarFocused = false"
+              @keydown.enter="commitFormulaBar"
+              @keydown.escape="cancelFormulaBarEdit"
             >
-              {{ $t('office.sheet.exportCsv') }}
-            </button>
-            <button
-              type="button"
-              class="office-sheet-export-menu-item"
-              data-testid="office-sheet-tb-export-xlsx"
-              @click="onExportFormat('xlsx')"
-            >
-              {{ $t('office.sheet.exportXlsx') }}
-            </button>
-            <button
-              type="button"
-              class="office-sheet-export-menu-item"
-              data-testid="office-sheet-tb-export-pdf"
-              @click="onExportFormat('pdf')"
-            >
-              {{ $t('office.sheet.toolbar.exportPdf') }}
-            </button>
           </div>
-        </div>
-      </div>
 
-      <div
-        class="office-sheet-tabs"
-        data-testid="office-sheet-tabs"
-      >
-        <button
-          v-for="tab in tabs"
-          :key="tab.name"
-          type="button"
-          class="office-sheet-tab"
-          :class="{ 'is-active': tab.name === store.activeSheetName }"
-          data-testid="office-sheet-tab"
-          @click="onSelectTab(tab.name)"
-        >
-          {{ tab.name }}
-        </button>
-        <button
-          v-if="store.canEdit()"
-          type="button"
-          class="office-sheet-tab office-sheet-tab--add"
-          data-testid="office-sheet-add-sheet-btn"
-          @click="showAddSheetDialog = true"
-        >
-          {{ $t('office.sheet.addSheet') }}
-        </button>
-      </div>
-
-      <div
-        ref="scrollRef"
-        class="office-sheet-grid"
-        data-testid="office-sheet-grid"
-        tabindex="0"
-        @scroll="onScroll"
-        @keydown="onGridKeydown"
-      >
-        <div
-          class="office-sheet-col-header-row"
-          :style="{ width: totalGridWidthPx }"
-        >
-          <div class="office-sheet-corner-header" />
           <div
-            v-for="column in totalColumns"
-            :key="column"
-            class="office-sheet-col-header"
-            data-testid="office-sheet-col-header"
-            :style="{ width: `${columnWidth}px` }"
+            class="office-sheet-toolbar"
+            data-testid="office-sheet-toolbar"
           >
-            {{ columnLetters(column) }}
-          </div>
-        </div>
-
-        <div
-          class="office-sheet-body-spacer"
-          :style="{ height: `${totalRows * rowHeight}px`, width: totalGridWidthPx }"
-        >
-          <div
-            class="office-sheet-visible-rows"
-            :style="{ transform: `translateY(${(firstVisibleRow - 1) * rowHeight}px)` }"
-          >
-            <div
-              v-for="row in visibleRows"
-              :key="row"
-              class="office-sheet-row"
-              :style="{ height: `${rowHeight}px` }"
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              :class="{ 'is-active': isBoldActive }"
+              data-testid="office-sheet-tb-bold"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onToggleBold"
             >
-              <div
-                class="office-sheet-row-header"
-                data-testid="office-sheet-row-header"
-                :style="{ width: `${rowHeaderWidth}px` }"
+              <strong>B</strong>
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              :class="{ 'is-active': isItalicActive }"
+              data-testid="office-sheet-tb-italic"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onToggleItalic"
+            >
+              <em>I</em>
+            </button>
+
+            <span class="office-sheet-toolbar-separator" />
+
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-align-left"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetAlign('left')"
+            >
+              {{ $t('office.sheet.toolbar.alignLeft') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-align-center"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetAlign('center')"
+            >
+              {{ $t('office.sheet.toolbar.alignCenter') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-align-right"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetAlign('right')"
+            >
+              {{ $t('office.sheet.toolbar.alignRight') }}
+            </button>
+
+            <span class="office-sheet-toolbar-separator" />
+
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-format-general"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetFormat('general')"
+            >
+              {{ $t('office.sheet.toolbar.formatGeneral') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-format-number"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetFormat('number')"
+            >
+              {{ $t('office.sheet.toolbar.formatNumber') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-format-currency"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetFormat('currency')"
+            >
+              {{ $t('office.sheet.toolbar.formatCurrency') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-format-percent"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetFormat('percent')"
+            >
+              {{ $t('office.sheet.toolbar.formatPercent') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-format-date"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onSetFormat('date')"
+            >
+              {{ $t('office.sheet.toolbar.formatDate') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-decimals-dec"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onAdjustDecimals(-1)"
+            >
+              .0
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-decimals-inc"
+              :disabled="!store.canEdit() || selectionAddresses.length === 0"
+              @click="onAdjustDecimals(1)"
+            >
+              .00
+            </button>
+
+            <span class="office-sheet-toolbar-separator" />
+
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-merge"
+              :disabled="!store.canEdit() || selectionAddresses.length < 2"
+              @click="onMerge"
+            >
+              {{ $t('office.sheet.toolbar.merge') }}
+            </button>
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-unmerge"
+              :disabled="!store.canEdit() || !activeCell"
+              @click="onUnmerge"
+            >
+              {{ $t('office.sheet.toolbar.unmerge') }}
+            </button>
+
+            <span class="office-sheet-toolbar-separator" />
+
+            <button
+              type="button"
+              class="office-sheet-toolbar-btn"
+              data-testid="office-sheet-tb-print"
+              @click="onPrint"
+            >
+              {{ $t('office.sheet.toolbar.print') }}
+            </button>
+
+            <div class="office-sheet-export-menu">
+              <button
+                type="button"
+                class="office-sheet-toolbar-btn"
+                data-testid="office-sheet-tb-export"
+                @click="exportMenuOpen = !exportMenuOpen"
               >
-                {{ row }}
-              </div>
+                {{ $t('office.sheet.toolbar.export') }}
+              </button>
               <div
-                v-for="column in totalColumns"
-                :key="column"
-                class="office-sheet-cell"
-                data-testid="office-sheet-cell"
-                :class="{ 'is-selected': isSelected(row, column), 'is-merged-away': isMergedAway(row, column) }"
-                :style="{ width: `${columnWidth}px`, ...cellDisplayStyle(row, column) }"
-                @mousedown="onCellMouseDown(row, column, $event)"
-                @mouseenter="onCellMouseEnter(row, column)"
-                @dblclick="onStartInlineEdit(row, column)"
+                v-if="exportMenuOpen"
+                class="office-sheet-export-menu-list"
+                data-testid="office-sheet-tb-export-menu"
               >
-                <input
-                  v-if="isEditingInline(row, column)"
-                  ref="inlineInputRef"
-                  v-model="editingText"
-                  type="text"
-                  class="office-sheet-cell-input"
-                  data-testid="office-sheet-cell-input"
-                  @keydown.enter.stop="commitInlineEditAndMove('down')"
-                  @keydown.tab.stop.prevent="commitInlineEditAndMove('right')"
-                  @keydown.escape.stop="cancelInlineEdit"
-                  @blur="commitInlineEdit"
+                <button
+                  type="button"
+                  class="office-sheet-export-menu-item"
+                  data-testid="office-sheet-tb-export-csv"
+                  @click="onExportFormat('csv')"
                 >
-                <span
-                  v-else-if="!isMergedAway(row, column)"
-                  class="office-sheet-cell-display"
-                >{{ displayValue(row, column) }}</span>
+                  {{ $t('office.sheet.exportCsv') }}
+                </button>
+                <button
+                  type="button"
+                  class="office-sheet-export-menu-item"
+                  data-testid="office-sheet-tb-export-xlsx"
+                  @click="onExportFormat('xlsx')"
+                >
+                  {{ $t('office.sheet.exportXlsx') }}
+                </button>
+                <button
+                  type="button"
+                  class="office-sheet-export-menu-item"
+                  data-testid="office-sheet-tb-export-pdf"
+                  @click="onExportFormat('pdf')"
+                >
+                  {{ $t('office.sheet.toolbar.exportPdf') }}
+                </button>
               </div>
             </div>
           </div>
 
           <div
-            v-for="overlay in mergedRangeOverlays"
-            :key="`merge-${overlay.range.startRow}-${overlay.range.startColumn}`"
-            class="office-sheet-merge-overlay"
-            :style="overlay.style"
+            class="office-sheet-tabs"
+            data-testid="office-sheet-tabs"
           >
-            {{ overlay.text }}
+            <button
+              v-for="tab in tabs"
+              :key="tab.name"
+              type="button"
+              class="office-sheet-tab"
+              :class="{ 'is-active': tab.name === store.activeSheetName }"
+              data-testid="office-sheet-tab"
+              @click="onSelectTab(tab.name)"
+            >
+              {{ tab.name }}
+            </button>
+            <button
+              v-if="store.canEdit()"
+              type="button"
+              class="office-sheet-tab office-sheet-tab--add"
+              data-testid="office-sheet-add-sheet-btn"
+              @click="showAddSheetDialog = true"
+            >
+              {{ $t('office.sheet.addSheet') }}
+            </button>
           </div>
 
           <div
-            v-if="selectionOverlayStyle"
-            class="office-sheet-selection"
-            data-testid="office-sheet-selection"
-            :style="selectionOverlayStyle"
-          />
+            ref="scrollRef"
+            class="office-sheet-grid"
+            data-testid="office-sheet-grid"
+            tabindex="0"
+            @scroll="onScroll"
+            @keydown="onGridKeydown"
+          >
+            <div
+              class="office-sheet-col-header-row"
+              :style="{ width: totalGridWidthPx }"
+            >
+              <div class="office-sheet-corner-header" />
+              <div
+                v-for="column in totalColumns"
+                :key="column"
+                class="office-sheet-col-header"
+                data-testid="office-sheet-col-header"
+                :style="{ width: `${columnWidth}px` }"
+              >
+                {{ columnLetters(column) }}
+              </div>
+            </div>
 
-          <div
-            v-if="formulaRangeHighlightStyle"
-            class="office-sheet-range-highlight"
-            data-testid="office-sheet-range-highlight"
-            :style="formulaRangeHighlightStyle"
-          />
+            <div
+              class="office-sheet-body-spacer"
+              :style="{ height: `${totalRows * rowHeight}px`, width: totalGridWidthPx }"
+            >
+              <div
+                class="office-sheet-visible-rows"
+                :style="{ transform: `translateY(${(firstVisibleRow - 1) * rowHeight}px)` }"
+              >
+                <div
+                  v-for="row in visibleRows"
+                  :key="row"
+                  class="office-sheet-row"
+                  :style="{ height: `${rowHeight}px` }"
+                >
+                  <div
+                    class="office-sheet-row-header"
+                    data-testid="office-sheet-row-header"
+                    :style="{ width: `${rowHeaderWidth}px` }"
+                  >
+                    {{ row }}
+                  </div>
+                  <div
+                    v-for="column in totalColumns"
+                    :key="column"
+                    class="office-sheet-cell"
+                    data-testid="office-sheet-cell"
+                    :class="{ 'is-selected': isSelected(row, column), 'is-merged-away': isMergedAway(row, column) }"
+                    :style="{ width: `${columnWidth}px`, ...cellDisplayStyle(row, column) }"
+                    @mousedown="onCellMouseDown(row, column, $event)"
+                    @mouseenter="onCellMouseEnter(row, column)"
+                    @dblclick="onStartInlineEdit(row, column)"
+                  >
+                    <input
+                      v-if="isEditingInline(row, column)"
+                      ref="inlineInputRef"
+                      v-model="editingText"
+                      type="text"
+                      class="office-sheet-cell-input"
+                      data-testid="office-sheet-cell-input"
+                      @keydown.enter.stop="commitInlineEditAndMove('down')"
+                      @keydown.tab.stop.prevent="commitInlineEditAndMove('right')"
+                      @keydown.escape.stop="cancelInlineEdit"
+                      @blur="commitInlineEdit"
+                    >
+                    <span
+                      v-else-if="!isMergedAway(row, column)"
+                      class="office-sheet-cell-display"
+                    >{{ displayValue(row, column) }}</span>
+                  </div>
+                </div>
+              </div>
 
-          <div
-            v-if="fillPreviewOverlayStyle"
-            class="office-sheet-fill-preview"
-            :style="fillPreviewOverlayStyle"
-          />
+              <div
+                v-for="overlay in mergedRangeOverlays"
+                :key="`merge-${overlay.range.startRow}-${overlay.range.startColumn}`"
+                class="office-sheet-merge-overlay"
+                :style="overlay.style"
+              >
+                {{ overlay.text }}
+              </div>
 
-          <div
-            v-if="fillHandleStyle && store.canEdit()"
-            class="office-sheet-fill-handle"
-            data-testid="office-sheet-fill-handle"
-            :style="fillHandleStyle"
-            @mousedown="onFillHandleMouseDown"
-          />
+              <div
+                v-if="selectionOverlayStyle"
+                class="office-sheet-selection"
+                data-testid="office-sheet-selection"
+                :style="selectionOverlayStyle"
+              />
+
+              <div
+                v-if="formulaRangeHighlightStyle"
+                class="office-sheet-range-highlight"
+                data-testid="office-sheet-range-highlight"
+                :style="formulaRangeHighlightStyle"
+              />
+
+              <div
+                v-if="fillPreviewOverlayStyle"
+                class="office-sheet-fill-preview"
+                :style="fillPreviewOverlayStyle"
+              />
+
+              <div
+                v-if="fillHandleStyle && store.canEdit()"
+                class="office-sheet-fill-handle"
+                data-testid="office-sheet-fill-handle"
+                :style="fillHandleStyle"
+                @mousedown="onFillHandleMouseDown"
+              />
+            </div>
+          </div>
         </div>
+
+        <OfficeSheetAiSidebar
+          v-if="showAiSidebar"
+          :ai-enabled="store.aiEnabled"
+          :can-toggle="store.access === 'owner'"
+          :can-propose-formula="store.canEdit()"
+          :has-active-cell="!!activeCell"
+          :running="store.aiRunning"
+          :error="store.aiError"
+          :proposal="store.aiProposal"
+          @toggle-enabled="onToggleAi"
+          @run-capability="onRunAiCapability"
+          @accept="onAcceptAiProposal"
+          @discard="store.clearAiProposal()"
+        />
       </div>
     </template>
 
@@ -529,7 +556,9 @@ import {
 } from '../utils/formulaRangeInsertion';
 import { formatNumericCellValue } from '../utils/sheetCellFormat';
 import OfficeInputDialog from '../components/OfficeInputDialog.vue';
+import OfficeSheetAiSidebar from '../components/OfficeSheetAiSidebar.vue';
 import type {
+  OfficeSheetAiCapability,
   OfficeSheetCellModel,
   OfficeSheetExportFormat,
   OfficeSheetNumberFormat,
@@ -579,6 +608,7 @@ const inlineInputRef = ref<HTMLInputElement[] | HTMLInputElement | null>(null);
 const importInputRef = ref<HTMLInputElement | null>(null);
 const exportMenuOpen = ref(false);
 const showAddSheetDialog = ref(false);
+const showAiSidebar = ref(false);
 
 // -- Drag interaction state (S147-4 headline feature) ------------------------
 // One small state machine covers all three drag gestures the grid supports —
@@ -643,6 +673,18 @@ const selectionBounds = computed<SheetCellRange | null>(() => {
 
 const selectionAddresses = computed<string[]>(() =>
   selectionBounds.value ? addressesInRange(selectionBounds.value) : [],
+);
+
+/** The A1(:A1) range text the AI helper reads — a bare address for a single
+ * cell, `"A1:C3"` for a drag-selected block. Reused verbatim as the `range`
+ * the backend bounds/serialises (S147-3.5) — never re-derived server-side. */
+const selectionRangeText = computed<string | null>(() =>
+  selectionBounds.value
+    ? rangeReferenceFor(
+      { column: selectionBounds.value.startColumn, row: selectionBounds.value.startRow },
+      { column: selectionBounds.value.endColumn, row: selectionBounds.value.endRow },
+    )
+    : null,
 );
 
 const isBoldActive = computed(
@@ -1130,6 +1172,23 @@ async function onTakeover(): Promise<void> {
   await store.takeover();
 }
 
+async function onToggleAi(enabled: boolean): Promise<void> {
+  await store.toggleAi(enabled);
+}
+
+async function onRunAiCapability(capability: OfficeSheetAiCapability, intent: string): Promise<void> {
+  if (!activeCell.value) return;
+  await store.runAiCapability(capability, {
+    address: activeAddressLabel.value,
+    rangeText: selectionRangeText.value ?? undefined,
+    intent,
+  });
+}
+
+async function onAcceptAiProposal(): Promise<void> {
+  await store.acceptAiProposal();
+}
+
 async function onReload(): Promise<void> {
   await store.load(nodeId.value);
 }
@@ -1235,6 +1294,18 @@ onBeforeUnmount(() => {
 .office-sheet-banner--warning {
   background: rgba(243, 156, 18, 0.12);
   color: #b9770e;
+}
+.office-sheet-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.office-sheet-main-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 .office-sheet-formula-bar {
   display: flex;

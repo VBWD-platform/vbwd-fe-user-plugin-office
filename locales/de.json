@@ -94,7 +94,8 @@
     },
     "preview": {
       "unavailable": "Für diesen Dateityp ist keine Vorschau verfügbar.",
-      "downloadInstead": "Zum Anzeigen herunterladen."
+      "downloadInstead": "Zum Anzeigen herunterladen.",
+      "loadFailed": "Diese Vorschau konnte nicht geladen werden."
     },
     "share": {
       "title": "\"{name}\" teilen",
@@ -257,7 +258,27 @@
         "staleVersion": "Diese Tabelle wurde anderswo geändert. Laden Sie neu, um die aktuelle Version zu sehen.",
         "locked": "Ein anderer Bearbeiter hat diese Tabelle gerade übernommen."
       },
-      "reload": "Neu laden"
+      "reload": "Neu laden",
+      "ai": {
+        "title": "KI-Assistent",
+        "enableToggle": "KI-Assistent für diese Tabelle aktivieren",
+        "disabledHint": "Der KI-Assistent ist für diese Tabelle deaktiviert. Der Eigentümer kann ihn oben aktivieren.",
+        "selectCellHint": "Wählen Sie eine Zelle aus und entscheiden Sie dann, was der KI-Assistent tun soll.",
+        "intentLabel": "Was soll die Formel tun?",
+        "intentPlaceholder": "z. B. Spalte B summieren",
+        "running": "Wird bearbeitet…",
+        "accept": "Übernehmen",
+        "discard": "Verwerfen",
+        "forbidden": "Der KI-Assistent ist für diese Tabelle nicht verfügbar.",
+        "budgetExceeded": "Das monatliche KI-Assistent-Budget wurde aufgebraucht.",
+        "proposedFormulaLabel": "Vorgeschlagene Formel für",
+        "capability": {
+          "sheet_write_formula": "Formel schreiben",
+          "sheet_fix_error": "Fehler beheben",
+          "sheet_explain_formula": "Formel erklären",
+          "sheet_summarize_range": "Bereich zusammenfassen"
+        }
+      }
     },
     "delete": {
       "title": "Endgültig löschen?",

@@ -10,8 +10,9 @@ const mockImportWorkbook = vi.fn();
 const mockAcquireLease = vi.fn();
 const mockReleaseLease = vi.fn();
 const mockPresence = vi.fn();
+const mockRunAiCapability = vi.fn();
 
-const { FakeOfficeDocConflictError } = vi.hoisted(() => {
+const { FakeOfficeDocConflictError, FakeOfficeAiForbiddenError, FakeOfficeAiBudgetExceededError } = vi.hoisted(() => {
   class HoistedOfficeDocConflictError extends Error {
     kind: 'stale_version' | 'locked';
     holderUserId?: string;
@@ -23,7 +24,13 @@ const { FakeOfficeDocConflictError } = vi.hoisted(() => {
       this.expiresAt = body.expires_at;
     }
   }
-  return { FakeOfficeDocConflictError: HoistedOfficeDocConflictError };
+  class HoistedOfficeAiForbiddenError extends Error {}
+  class HoistedOfficeAiBudgetExceededError extends Error {}
+  return {
+    FakeOfficeDocConflictError: HoistedOfficeDocConflictError,
+    FakeOfficeAiForbiddenError: HoistedOfficeAiForbiddenError,
+    FakeOfficeAiBudgetExceededError: HoistedOfficeAiBudgetExceededError,
+  };
 });
 
 vi.mock('../src/api/officeApi', () => ({
@@ -34,6 +41,7 @@ vi.mock('../src/api/officeApi', () => ({
     recalc: (...args: unknown[]) => mockRecalc(...args),
     exportWorkbook: (...args: unknown[]) => mockExportWorkbook(...args),
     importWorkbook: (...args: unknown[]) => mockImportWorkbook(...args),
+    runAiCapability: (...args: unknown[]) => mockRunAiCapability(...args),
   },
   officeDocApi: {
     acquireLease: (...args: unknown[]) => mockAcquireLease(...args),
@@ -41,6 +49,8 @@ vi.mock('../src/api/officeApi', () => ({
     presence: (...args: unknown[]) => mockPresence(...args),
   },
   OfficeDocConflictError: FakeOfficeDocConflictError,
+  OfficeAiForbiddenError: FakeOfficeAiForbiddenError,
+  OfficeAiBudgetExceededError: FakeOfficeAiBudgetExceededError,
 }));
 
 import { changeFromRawInput, useOfficeSheetStore } from '../src/stores/useOfficeSheetStore';
@@ -280,5 +290,190 @@ describe('useOfficeSheetStore', () => {
     expect(store.nodeId).toBeNull();
     expect(store.workbook).toBeNull();
     expect(store.access).toBeNull();
+    expect(store.aiEnabled).toBe(false);
+    expect(store.aiProposal).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S147-3.5 — the Sheet AI helper.
+// ---------------------------------------------------------------------------
+
+describe('useOfficeSheetStore — AI helper', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    mockAcquireLease.mockResolvedValue({
+      held: true, holder_user_id: 'me', is_self: true, granted: true,
+      expires_at: '2026-07-30T00:01:30Z',
+    });
+    mockPresence.mockResolvedValue({
+      held: false, holder_user_id: null, is_self: false, granted: true, expires_at: null,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('applyView reads ai_enabled from the document into the store', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+    expect(store.aiEnabled).toBe(true);
+    store.stopPolling();
+  });
+
+  it('toggleAi saves an empty-changes request carrying ai_enabled and updates local state', async () => {
+    mockGetSheet.mockResolvedValue(sheetView());
+    mockSaveCells.mockResolvedValue({ version_no: 2, changes: {} });
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+
+    await store.toggleAi(true);
+
+    expect(mockSaveCells).toHaveBeenCalledWith('sheet-1', [], 1, true);
+    expect(store.aiEnabled).toBe(true);
+    expect(store.versionNo).toBe(2);
+    store.stopPolling();
+  });
+
+  it('toggleAi does nothing for a caller who cannot edit', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ access: 'view' }));
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+
+    await store.toggleAi(true);
+
+    expect(mockSaveCells).not.toHaveBeenCalled();
+    expect(store.aiEnabled).toBe(false);
+    store.stopPolling();
+  });
+
+  it('runAiCapability populates aiProposal on success', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      kind: 'formula',
+      capability: 'sheet_write_formula',
+      connection_slug: 'default',
+      address: 'B1',
+      formula: '=SUM(A1:A2)',
+    });
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+
+    await store.runAiCapability('sheet_write_formula', { address: 'B1', intent: 'sum column A' });
+
+    expect(mockRunAiCapability).toHaveBeenCalledWith('sheet-1', {
+      capability: 'sheet_write_formula',
+      address: 'B1',
+      intent: 'sum column A',
+    });
+    expect(store.aiProposal?.formula).toBe('=SUM(A1:A2)');
+    expect(store.aiRunning).toBe(false);
+    store.stopPolling();
+  });
+
+  it('runAiCapability maps a forbidden error onto a translatable key', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockRejectedValue(new FakeOfficeAiForbiddenError('nope'));
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+
+    await store.runAiCapability('sheet_explain_formula', { address: 'B1' });
+
+    expect(store.aiError).toBe('office.sheet.ai.forbidden');
+    expect(store.aiProposal).toBeNull();
+    store.stopPolling();
+  });
+
+  it('runAiCapability maps a budget-exceeded error onto a translatable key', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockRejectedValue(new FakeOfficeAiBudgetExceededError('nope'));
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+
+    await store.runAiCapability('sheet_explain_formula', { address: 'B1' });
+
+    expect(store.aiError).toBe('office.sheet.ai.budgetExceeded');
+    store.stopPolling();
+  });
+
+  it('acceptAiProposal for a formula proposal applies it through saveCells, never a raw write', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      kind: 'formula',
+      capability: 'sheet_write_formula',
+      connection_slug: 'default',
+      address: 'B1',
+      formula: '=SUM(A1:A2)',
+    });
+    mockSaveCells.mockResolvedValue({ version_no: 2, changes: { 'Sheet1!B1': 30 } });
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+    await store.runAiCapability('sheet_write_formula', { address: 'B1', intent: 'sum' });
+
+    const applied = await store.acceptAiProposal();
+
+    expect(applied).toBe(true);
+    expect(mockSaveCells).toHaveBeenCalledWith(
+      'sheet-1',
+      [{ sheet: 'Sheet1', address: 'B1', formula: '=SUM(A1:A2)' }],
+      1,
+    );
+    expect(store.getCell('Sheet1', 'B1').v).toBe(30);
+    expect(store.aiProposal).toBeNull();
+    store.stopPolling();
+  });
+
+  it('acceptAiProposal always sends the formula slot even without a leading "="', async () => {
+    // Proves the model's reply can never fall through to the bare-value
+    // slot `changeFromRawInput` would pick for text with no leading "=" —
+    // it must go through the engine's formula parser either way.
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      kind: 'formula',
+      capability: 'sheet_write_formula',
+      connection_slug: 'default',
+      address: 'B1',
+      formula: 'SUM(A1:A2)',
+    });
+    mockSaveCells.mockResolvedValue({
+      version_no: 2,
+      changes: { 'Sheet1!B1': { t: 'error', v: '#NAME?' } },
+    });
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+    await store.runAiCapability('sheet_write_formula', { address: 'B1', intent: 'sum' });
+
+    await store.acceptAiProposal();
+
+    expect(mockSaveCells).toHaveBeenCalledWith(
+      'sheet-1',
+      [{ sheet: 'Sheet1', address: 'B1', formula: '=SUM(A1:A2)' }],
+      1,
+    );
+    store.stopPolling();
+  });
+
+  it('acceptAiProposal for a text proposal just clears it — nothing to apply', async () => {
+    mockGetSheet.mockResolvedValue(sheetView({ document: { ai_enabled: true } }));
+    mockRunAiCapability.mockResolvedValue({
+      kind: 'text',
+      capability: 'sheet_explain_formula',
+      connection_slug: 'default',
+      text: 'It sums A1 and A2.',
+    });
+    const store = useOfficeSheetStore();
+    await store.load('sheet-1');
+    await store.runAiCapability('sheet_explain_formula', { address: 'B1' });
+
+    const applied = await store.acceptAiProposal();
+
+    expect(applied).toBe(true);
+    expect(mockSaveCells).not.toHaveBeenCalled();
+    expect(store.aiProposal).toBeNull();
+    store.stopPolling();
   });
 });

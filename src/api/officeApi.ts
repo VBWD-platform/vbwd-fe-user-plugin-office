@@ -747,6 +747,40 @@ export interface OfficeSheetImportResult {
 
 export type OfficeSheetExportFormat = 'csv' | 'xlsx' | 'pdf';
 
+// ---------------------------------------------------------------------------
+// S147-3.5 — the Sheet AI helper. Shares `OfficeAiForbiddenError`/
+// `OfficeAiBudgetExceededError` with `officeDocApi` above (one error shape,
+// DRY) — the AI helper's budget/connection/validation machinery is the SAME
+// backend service either way, just a different capability set.
+// ---------------------------------------------------------------------------
+
+export type OfficeSheetAiCapability =
+  | 'sheet_write_formula'
+  | 'sheet_explain_formula'
+  | 'sheet_summarize_range'
+  | 'sheet_fix_error';
+
+export interface RunSheetAiCapabilityInput {
+  capability: OfficeSheetAiCapability;
+  address: string;
+  rangeText?: string;
+  intent?: string;
+}
+
+/** A `formula` proposal names the ADDRESS it is for and the raw formula
+ * text the user must review before accepting; a `text` proposal is prose
+ * (explain/summarise). Never applied automatically — the caller sends a
+ * `formula` proposal back through `saveCells` to have it parsed/validated/
+ * recalculated by the engine (never written verbatim by this client). */
+export interface OfficeSheetAiProposal {
+  kind: 'formula' | 'text';
+  capability: OfficeSheetAiCapability;
+  connection_slug: string;
+  address?: string;
+  formula?: string;
+  text?: string;
+}
+
 async function sheetPutOrThrowConflict(
   url: string,
   body: unknown,
@@ -774,20 +808,49 @@ export const officeSheetApi = {
 
   /** `baseVersionNo` is the never-trust-the-client guard — a stale value
    * rejects with `OfficeDocConflictError` (the SAME class Docs throws;
-   * one shape, one place the caller branches on `.kind`). */
+   * one shape, one place the caller branches on `.kind`). `aiEnabled` mirrors
+   * `officeDocApi.saveDoc`'s owner-only opt-in toggle — `changes` may be `[]`
+   * ONLY when this is set (the backend enforces that; see
+   * `OfficeSheetEditorService.save_cells`'s docstring). */
   saveCells(
     nodeId: string,
     changes: OfficeSheetCellChange[],
     baseVersionNo: number,
+    aiEnabled?: boolean,
   ): Promise<OfficeSheetSaveResult> {
-    return sheetPutOrThrowConflict(`${API}/sheets/${nodeId}/cells`, {
-      changes,
-      base_version_no: baseVersionNo,
-    });
+    const body: Record<string, unknown> = { changes, base_version_no: baseVersionNo };
+    if (aiEnabled !== undefined) body.ai_enabled = aiEnabled;
+    return sheetPutOrThrowConflict(`${API}/sheets/${nodeId}/cells`, body);
   },
 
   recalc(nodeId: string): Promise<OfficeSheetSaveResult> {
     return sendJson(`${API}/sheets/${nodeId}/recalc`, 'POST');
+  },
+
+  async runAiCapability(nodeId: string, input: RunSheetAiCapabilityInput): Promise<OfficeSheetAiProposal> {
+    const response = await fetch(`${API}/sheets/${nodeId}/ai`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        capability: input.capability,
+        address: input.address,
+        range: input.rangeText,
+        intent: input.intent || '',
+      }),
+    });
+    if (response.status === 403) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new OfficeAiForbiddenError(body.error);
+    }
+    if (response.status === 429) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new OfficeAiBudgetExceededError(body.error);
+    }
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error || `AI request failed: ${response.status}`);
+    }
+    return response.json();
   },
 
   async exportWorkbook(

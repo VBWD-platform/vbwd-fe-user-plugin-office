@@ -94,7 +94,8 @@
     },
     "preview": {
       "unavailable": "No preview available for this file type.",
-      "downloadInstead": "Download to view it."
+      "downloadInstead": "Download to view it.",
+      "loadFailed": "This preview could not be loaded."
     },
     "share": {
       "title": "Share \"{name}\"",
@@ -257,7 +258,27 @@
         "staleVersion": "This spreadsheet changed elsewhere. Reload to see the latest version.",
         "locked": "Another editor just took over this spreadsheet."
       },
-      "reload": "Reload"
+      "reload": "Reload",
+      "ai": {
+        "title": "AI helper",
+        "enableToggle": "Enable AI helper for this spreadsheet",
+        "disabledHint": "The AI helper is off for this spreadsheet. The owner can turn it on above.",
+        "selectCellHint": "Select a cell, then choose what you'd like the AI helper to do.",
+        "intentLabel": "What do you want the formula to do?",
+        "intentPlaceholder": "e.g. total column B",
+        "running": "Thinking…",
+        "accept": "Accept",
+        "discard": "Discard",
+        "forbidden": "The AI helper is not available for this spreadsheet.",
+        "budgetExceeded": "The monthly AI helper budget has been used up.",
+        "proposedFormulaLabel": "Proposed formula for",
+        "capability": {
+          "sheet_write_formula": "Write formula",
+          "sheet_fix_error": "Fix error",
+          "sheet_explain_formula": "Explain formula",
+          "sheet_summarize_range": "Summarise range"
+        }
+      }
     },
     "delete": {
       "title": "Delete permanently?",

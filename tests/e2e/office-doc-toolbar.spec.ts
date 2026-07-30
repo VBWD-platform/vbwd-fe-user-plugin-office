@@ -33,7 +33,11 @@ async function waitForSaved(page: Page): Promise<void> {
 
 test('VBWD Docs — formatting, image reload persistence, table import, PDF export', async ({ page }) => {
   test.setTimeout(90000);
-  page.on('pageerror', (err) => console.log('PAGE ERROR:', err.message));
+  // Collected rather than logged: an uncaught page error during a toolbar
+  // interaction is a FAILURE, not a debug note. Logging it would let a broken
+  // editor pass this test as long as the assertions below happened to survive.
+  const pageErrors: string[] = [];
+  page.on('pageerror', (err) => pageErrors.push(err.message));
 
   await page.goto('/login');
   await page.fill('[data-testid="email"]', 'test@example.com');
@@ -120,4 +124,6 @@ test('VBWD Docs — formatting, image reload persistence, table import, PDF expo
   const fs = await import('fs');
   const pdfBytes = fs.readFileSync(downloadPath as string);
   expect(pdfBytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+
+  expect(pageErrors, `uncaught page errors: ${pageErrors.join(' | ')}`).toEqual([]);
 });

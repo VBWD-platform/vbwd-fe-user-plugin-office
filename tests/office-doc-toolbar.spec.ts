@@ -264,6 +264,62 @@ describe('OfficeDocToolbar', () => {
     wrapper.unmount();
   });
 
+  it('inserts a link via the link dialog', async () => {
+    const wrapper = mountToolbar(editor);
+
+    await wrapper.find('[data-testid="office-doc-tb-link"]').trigger('click');
+    expect(wrapper.find('[data-testid="office-doc-tb-link-modal"]').exists()).toBe(true);
+
+    await wrapper.find('[data-testid="office-doc-tb-link-input"]').setValue('https://example.com');
+    await wrapper.find('[data-testid="office-doc-tb-link-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(editor.isActive('link', { href: 'https://example.com' })).toBe(true);
+    expect(wrapper.find('[data-testid="office-doc-tb-link-modal"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('cancelling the link dialog inserts nothing', async () => {
+    const wrapper = mountToolbar(editor);
+
+    await wrapper.find('[data-testid="office-doc-tb-link"]').trigger('click');
+    await wrapper.find('[data-testid="office-doc-tb-link-cancel"]').trigger('click');
+
+    expect(editor.isActive('link')).toBe(false);
+    expect(wrapper.find('[data-testid="office-doc-tb-link-modal"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('inserts a table with the chosen rows and columns via a single dialog', async () => {
+    const wrapper = mountToolbar(editor);
+
+    await wrapper.find('[data-testid="office-doc-tb-table"]').trigger('click');
+    expect(wrapper.find('[data-testid="office-doc-tb-table-modal"]').exists()).toBe(true);
+
+    await wrapper.find('[data-testid="office-doc-tb-table-input"]').setValue('2');
+    await wrapper.find('[data-testid="office-doc-tb-table-input-secondary"]').setValue('4');
+    await wrapper.find('[data-testid="office-doc-tb-table-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(editor.isActive('table')).toBe(true);
+    const html = editor.getHTML();
+    expect(html.match(/<tr/g)).toHaveLength(2);
+    expect(html.match(/<t[hd]/g)).toHaveLength(8);
+    expect(wrapper.find('[data-testid="office-doc-tb-table-modal"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('cancelling the table dialog inserts nothing', async () => {
+    const wrapper = mountToolbar(editor);
+
+    await wrapper.find('[data-testid="office-doc-tb-table"]').trigger('click');
+    await wrapper.find('[data-testid="office-doc-tb-table-cancel"]').trigger('click');
+
+    expect(editor.isActive('table')).toBe(false);
+    expect(wrapper.find('[data-testid="office-doc-tb-table-modal"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('the print button calls window.print', async () => {
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
     const wrapper = mountToolbar(editor);

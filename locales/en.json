@@ -30,10 +30,16 @@
       "cancel": "Cancel"
     },
     "newDoc": {
-      "namePrompt": "Document name"
+      "title": "New document",
+      "namePrompt": "Document name",
+      "create": "Create",
+      "cancel": "Cancel"
     },
     "newSheet": {
-      "namePrompt": "Spreadsheet name"
+      "title": "New spreadsheet",
+      "namePrompt": "Spreadsheet name",
+      "create": "Create",
+      "cancel": "Cancel"
     },
     "node": {
       "folder": "Folder",
@@ -159,7 +165,14 @@
         "sizeDefault": "Default size",
         "insertImage": "Insert image",
         "insertLink": "Insert link",
+        "linkUrlPlaceholder": "URL (https://...)",
+        "insertLinkConfirm": "Insert",
+        "insertLinkCancel": "Cancel",
         "insertTable": "Insert table",
+        "tableRowsPlaceholder": "Rows",
+        "tableColumnsPlaceholder": "Columns",
+        "insertTableConfirm": "Insert",
+        "insertTableCancel": "Cancel",
         "insertTableFromFile": "Insert table from file (.csv/.xlsx)",
         "indent": "Indent",
         "outdent": "Outdent",
@@ -201,6 +214,8 @@
       "formulaBarPlaceholder": "Enter a value or a formula, e.g. =SUM(A1:A3)",
       "addSheet": "+ Add sheet",
       "addSheetPrompt": "Sheet name",
+      "addSheetConfirm": "Add",
+      "addSheetCancel": "Cancel",
       "recalc": "Recalculate",
       "exportCsv": "Export CSV",
       "exportXlsx": "Export XLSX",

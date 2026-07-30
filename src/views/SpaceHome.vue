@@ -54,7 +54,7 @@
             type="button"
             class="vbwd-btn vbwd-btn--ghost vbwd-btn--sm"
             data-testid="office-new-doc-btn"
-            @click="onCreateDoc"
+            @click="showNewDocDialog = true"
           >
             {{ $t('office.toolbar.newDoc') }}
           </button>
@@ -62,7 +62,7 @@
             type="button"
             class="vbwd-btn vbwd-btn--ghost vbwd-btn--sm"
             data-testid="office-new-sheet-btn"
-            @click="onCreateSheet"
+            @click="showNewSheetDialog = true"
           >
             {{ $t('office.toolbar.newSheet') }}
           </button>
@@ -258,6 +258,30 @@
     />
 
     <OfficeInputDialog
+      v-if="showNewDocDialog"
+      :title="$t('office.newDoc.title')"
+      :placeholder="$t('office.newDoc.namePrompt')"
+      :confirm-label="$t('office.newDoc.create')"
+      :cancel-label="$t('office.newDoc.cancel')"
+      initial-value="Untitled document"
+      testid-prefix="office-new-doc"
+      @confirm="onCreateDoc"
+      @cancel="showNewDocDialog = false"
+    />
+
+    <OfficeInputDialog
+      v-if="showNewSheetDialog"
+      :title="$t('office.newSheet.title')"
+      :placeholder="$t('office.newSheet.namePrompt')"
+      :confirm-label="$t('office.newSheet.create')"
+      :cancel-label="$t('office.newSheet.cancel')"
+      initial-value="Untitled spreadsheet"
+      testid-prefix="office-new-sheet"
+      @confirm="onCreateSheet"
+      @cancel="showNewSheetDialog = false"
+    />
+
+    <OfficeInputDialog
       v-if="renamingNode"
       :title="$t('office.rename.title')"
       :placeholder="$t('office.rename.placeholder')"
@@ -325,6 +349,8 @@ const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 
 const showNewFolderDialog = ref(false);
+const showNewDocDialog = ref(false);
+const showNewSheetDialog = ref(false);
 const renamingNode = ref<OfficeNode | null>(null);
 const movingNode = ref<OfficeNode | null>(null);
 const versionsNode = ref<OfficeNode | null>(null);
@@ -389,18 +415,14 @@ function onNodeClick(node: OfficeNode): void {
   }
 }
 
-async function onCreateDoc(): Promise<void> {
-  // eslint-disable-next-line no-alert
-  const name = window.prompt('Document name', 'Untitled document');
-  if (!name) return;
+async function onCreateDoc(name: string): Promise<void> {
+  showNewDocDialog.value = false;
   const view = await officeDocApi.createDoc(name, store.currentParentId);
   router.push(`/dashboard/office/doc/${view.id}`);
 }
 
-async function onCreateSheet(): Promise<void> {
-  // eslint-disable-next-line no-alert
-  const name = window.prompt('Spreadsheet name', 'Untitled spreadsheet');
-  if (!name) return;
+async function onCreateSheet(name: string): Promise<void> {
+  showNewSheetDialog.value = false;
   const view = await officeSheetApi.createSheet(name, store.currentParentId);
   router.push(`/dashboard/office/sheet/${view.id}`);
 }

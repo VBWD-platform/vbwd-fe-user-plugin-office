@@ -8,6 +8,8 @@ const mockCreateFolder = vi.fn();
 const mockUploadDocument = vi.fn();
 const mockDownloadDocument = vi.fn();
 const mockListVersions = vi.fn();
+const mockCreateDoc = vi.fn();
+const mockCreateSheet = vi.fn();
 
 vi.mock('../src/api/officeApi', () => ({
   officeApi: {
@@ -23,6 +25,17 @@ vi.mock('../src/api/officeApi', () => ({
     restoreVersion: vi.fn(),
     contentUrl: (id: string) => `/api/v1/office/documents/${id}/content`,
   },
+  officeDocApi: {
+    createDoc: (...args: unknown[]) => mockCreateDoc(...args),
+  },
+  officeSheetApi: {
+    createSheet: (...args: unknown[]) => mockCreateSheet(...args),
+  },
+}));
+
+const mockRouterPush = vi.fn();
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 // Stub the shared Icon component so mounting does not need the fe-core registry.
@@ -185,6 +198,66 @@ describe('SpaceHome', () => {
 
     expect(mockCreateFolder).toHaveBeenCalledWith('Contracts', null);
     expect(wrapper.find('[data-testid="office-new-folder-modal"]').exists()).toBe(false);
+  });
+
+  it('creates a document via the new-document dialog', async () => {
+    mockListNodes.mockResolvedValue([]);
+    mockCreateDoc.mockResolvedValue({ id: 'doc-1' });
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-new-doc-btn"]').trigger('click');
+    expect(wrapper.find('[data-testid="office-new-doc-modal"]').exists()).toBe(true);
+
+    await wrapper.find('[data-testid="office-new-doc-input"]').setValue('Meeting notes');
+    await wrapper.find('[data-testid="office-new-doc-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(mockCreateDoc).toHaveBeenCalledWith('Meeting notes', null);
+    expect(mockRouterPush).toHaveBeenCalledWith('/dashboard/office/doc/doc-1');
+    expect(wrapper.find('[data-testid="office-new-doc-modal"]').exists()).toBe(false);
+  });
+
+  it('cancelling the new-document dialog creates nothing', async () => {
+    mockListNodes.mockResolvedValue([]);
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-new-doc-btn"]').trigger('click');
+    await wrapper.find('[data-testid="office-new-doc-cancel"]').trigger('click');
+
+    expect(mockCreateDoc).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="office-new-doc-modal"]').exists()).toBe(false);
+  });
+
+  it('creates a spreadsheet via the new-spreadsheet dialog', async () => {
+    mockListNodes.mockResolvedValue([]);
+    mockCreateSheet.mockResolvedValue({ id: 'sheet-1' });
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-new-sheet-btn"]').trigger('click');
+    expect(wrapper.find('[data-testid="office-new-sheet-modal"]').exists()).toBe(true);
+
+    await wrapper.find('[data-testid="office-new-sheet-input"]').setValue('Budget');
+    await wrapper.find('[data-testid="office-new-sheet-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(mockCreateSheet).toHaveBeenCalledWith('Budget', null);
+    expect(mockRouterPush).toHaveBeenCalledWith('/dashboard/office/sheet/sheet-1');
+    expect(wrapper.find('[data-testid="office-new-sheet-modal"]').exists()).toBe(false);
+  });
+
+  it('cancelling the new-spreadsheet dialog creates nothing', async () => {
+    mockListNodes.mockResolvedValue([]);
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-new-sheet-btn"]').trigger('click');
+    await wrapper.find('[data-testid="office-new-sheet-cancel"]').trigger('click');
+
+    expect(mockCreateSheet).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="office-new-sheet-modal"]').exists()).toBe(false);
   });
 
   it('opens the preview pane when a document is clicked', async () => {

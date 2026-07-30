@@ -370,7 +370,7 @@
           type="button"
           class="office-sheet-tab office-sheet-tab--add"
           data-testid="office-sheet-add-sheet-btn"
-          @click="onAddSheet"
+          @click="showAddSheetDialog = true"
         >
           {{ $t('office.sheet.addSheet') }}
         </button>
@@ -491,6 +491,18 @@
         </div>
       </div>
     </template>
+
+    <OfficeInputDialog
+      v-if="showAddSheetDialog"
+      :title="$t('office.sheet.addSheet')"
+      :placeholder="$t('office.sheet.addSheetPrompt')"
+      :confirm-label="$t('office.sheet.addSheetConfirm')"
+      :cancel-label="$t('office.sheet.addSheetCancel')"
+      :initial-value="defaultNewSheetName"
+      testid-prefix="office-sheet-add-sheet"
+      @confirm="onAddSheetDialogConfirm"
+      @cancel="showAddSheetDialog = false"
+    />
   </div>
 </template>
 
@@ -516,6 +528,7 @@ import {
   type FormulaRangeDragState,
 } from '../utils/formulaRangeInsertion';
 import { formatNumericCellValue } from '../utils/sheetCellFormat';
+import OfficeInputDialog from '../components/OfficeInputDialog.vue';
 import type {
   OfficeSheetCellModel,
   OfficeSheetExportFormat,
@@ -565,6 +578,7 @@ const editingText = ref('');
 const inlineInputRef = ref<HTMLInputElement[] | HTMLInputElement | null>(null);
 const importInputRef = ref<HTMLInputElement | null>(null);
 const exportMenuOpen = ref(false);
+const showAddSheetDialog = ref(false);
 
 // -- Drag interaction state (S147-4 headline feature) ------------------------
 // One small state machine covers all three drag gestures the grid supports —
@@ -583,6 +597,8 @@ const fillPreviewRange = ref<SheetCellRange | null>(null);
 const totalGridWidthPx = computed(() => `${rowHeaderWidth + totalColumns * columnWidth}px`);
 
 const tabs = computed(() => store.workbook?.sheets ?? []);
+
+const defaultNewSheetName = computed(() => `Sheet${tabs.value.length + 1}`);
 
 const importReportEntries = computed(() => store.importReport);
 
@@ -1080,10 +1096,8 @@ function onSelectTab(sheetName: string): void {
   formulaBarValue.value = '';
 }
 
-function onAddSheet(): void {
-  // eslint-disable-next-line no-alert
-  const sheetName = window.prompt('Sheet name', `Sheet${tabs.value.length + 1}`);
-  if (!sheetName) return;
+function onAddSheetDialogConfirm(sheetName: string): void {
+  showAddSheetDialog.value = false;
   store.addSheetTab(sheetName);
 }
 

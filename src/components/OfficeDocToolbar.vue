@@ -114,7 +114,7 @@
       data-testid="office-doc-tb-link"
       :disabled="!canEdit"
       :title="$t('office.doc.toolbar.insertLink')"
-      @click="onInsertLink"
+      @click="showLinkDialog = true"
     >
       🔗
     </button>
@@ -189,7 +189,7 @@
       data-testid="office-doc-tb-table"
       :disabled="!canEdit"
       :title="$t('office.doc.toolbar.insertTable')"
-      @click="onInsertEmptyTable"
+      @click="showTableDialog = true"
     >
       ▦
     </button>
@@ -272,6 +272,31 @@
     >
       {{ tableImportError }}
     </div>
+
+    <OfficeInputDialog
+      v-if="showLinkDialog"
+      :title="$t('office.doc.toolbar.insertLink')"
+      :placeholder="$t('office.doc.toolbar.linkUrlPlaceholder')"
+      :confirm-label="$t('office.doc.toolbar.insertLinkConfirm')"
+      :cancel-label="$t('office.doc.toolbar.insertLinkCancel')"
+      testid-prefix="office-doc-tb-link"
+      @confirm="onLinkDialogConfirm"
+      @cancel="showLinkDialog = false"
+    />
+
+    <OfficeInputDialog
+      v-if="showTableDialog"
+      :title="$t('office.doc.toolbar.insertTable')"
+      :placeholder="$t('office.doc.toolbar.tableRowsPlaceholder')"
+      :secondary-placeholder="$t('office.doc.toolbar.tableColumnsPlaceholder')"
+      :confirm-label="$t('office.doc.toolbar.insertTableConfirm')"
+      :cancel-label="$t('office.doc.toolbar.insertTableCancel')"
+      initial-value="3"
+      secondary-initial-value="3"
+      testid-prefix="office-doc-tb-table"
+      @confirm="onTableDialogConfirm"
+      @cancel="showTableDialog = false"
+    />
   </div>
 </template>
 
@@ -280,6 +305,7 @@ import { computed, ref } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
 
 import { officeDocApi, type OfficeDocExportFormat } from '../api/officeApi';
+import OfficeInputDialog from './OfficeInputDialog.vue';
 
 const FONT_FAMILY_CHOICES = [
   'Arial',
@@ -302,6 +328,8 @@ const imageInputRef = ref<HTMLInputElement | null>(null);
 const tableFileInputRef = ref<HTMLInputElement | null>(null);
 const showExportMenu = ref(false);
 const tableImportError = ref<string | null>(null);
+const showLinkDialog = ref(false);
+const showTableDialog = ref(false);
 
 const currentBlockStyle = computed(() => {
   const editor = props.editor;
@@ -350,26 +378,19 @@ async function onImageInputChange(event: Event): Promise<void> {
   props.editor.chain().focus().setImage({ src: uploaded.src, alt: file.name }).run();
 }
 
-function onInsertLink(): void {
+function onLinkDialogConfirm(url: string): void {
+  showLinkDialog.value = false;
   const editor = props.editor;
   if (!editor) return;
-  // eslint-disable-next-line no-alert
-  const url = window.prompt('URL (https://...)');
-  if (!url) return;
   editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
 }
 
-function onInsertEmptyTable(): void {
+function onTableDialogConfirm(rowsInput: string, columnsInput?: string): void {
+  showTableDialog.value = false;
   const editor = props.editor;
   if (!editor) return;
-  // eslint-disable-next-line no-alert
-  const rowsInput = window.prompt('Rows', '3');
-  if (!rowsInput) return;
-  // eslint-disable-next-line no-alert
-  const columnsInput = window.prompt('Columns', '3');
-  if (!columnsInput) return;
   const rows = Math.max(1, parseInt(rowsInput, 10) || 0);
-  const columns = Math.max(1, parseInt(columnsInput, 10) || 0);
+  const columns = Math.max(1, parseInt(columnsInput ?? '', 10) || 0);
   editor.chain().focus().insertTable({ rows, cols: columns, withHeaderRow: true }).run();
 }
 

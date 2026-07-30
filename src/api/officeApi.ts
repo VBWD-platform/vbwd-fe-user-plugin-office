@@ -353,8 +353,10 @@ export const officeApi = {
 /** A ProseMirror/Tiptap-shaped node — deliberately untyped beyond the shape
  * Tiptap itself produces (`editor.getJSON()`); the backend is the schema's
  * one source of truth (`doc_content.py`). */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type OfficeDocContentModel = Record<string, any>;
+// A Tiptap/ProseMirror document is a genuinely open-ended node tree, so the
+// value type is unknown rather than `any` — callers must narrow instead of
+// silently inheriting an escape hatch.
+export type OfficeDocContentModel = Record<string, unknown>;
 
 export type OfficeDocAccess = 'owner' | 'edit' | 'comment' | 'view';
 

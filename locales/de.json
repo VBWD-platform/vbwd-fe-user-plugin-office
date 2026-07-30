@@ -30,10 +30,16 @@
       "cancel": "Abbrechen"
     },
     "newDoc": {
-      "namePrompt": "Dokumentname"
+      "title": "Neues Dokument",
+      "namePrompt": "Dokumentname",
+      "create": "Erstellen",
+      "cancel": "Abbrechen"
     },
     "newSheet": {
-      "namePrompt": "Tabellenname"
+      "title": "Neue Tabelle",
+      "namePrompt": "Tabellenname",
+      "create": "Erstellen",
+      "cancel": "Abbrechen"
     },
     "node": {
       "folder": "Ordner",
@@ -159,7 +165,14 @@
         "sizeDefault": "Standardgröße",
         "insertImage": "Bild einfügen",
         "insertLink": "Link einfügen",
+        "linkUrlPlaceholder": "URL (https://...)",
+        "insertLinkConfirm": "Einfügen",
+        "insertLinkCancel": "Abbrechen",
         "insertTable": "Tabelle einfügen",
+        "tableRowsPlaceholder": "Zeilen",
+        "tableColumnsPlaceholder": "Spalten",
+        "insertTableConfirm": "Einfügen",
+        "insertTableCancel": "Abbrechen",
         "insertTableFromFile": "Tabelle aus Datei einfügen (.csv/.xlsx)",
         "indent": "Einrücken",
         "outdent": "Ausrücken",
@@ -201,6 +214,8 @@
       "formulaBarPlaceholder": "Geben Sie einen Wert oder eine Formel ein, z. B. =SUM(A1:A3)",
       "addSheet": "+ Tabelle hinzufügen",
       "addSheetPrompt": "Tabellenname",
+      "addSheetConfirm": "Hinzufügen",
+      "addSheetCancel": "Abbrechen",
       "recalc": "Neu berechnen",
       "exportCsv": "CSV exportieren",
       "exportXlsx": "XLSX exportieren",

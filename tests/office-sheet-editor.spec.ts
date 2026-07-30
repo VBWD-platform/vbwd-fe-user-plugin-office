@@ -175,6 +175,47 @@ describe('OfficeSheetEditor', () => {
     wrapper.unmount();
   });
 
+  it('adds a sheet tab via the add-sheet dialog', async () => {
+    mockGetSheet.mockResolvedValue(sheetView());
+    // addSheetTab queues a debounced save (SAVE_DEBOUNCE_MS=400 in the
+    // store) — give it a resolved response and let the timer fire so it
+    // doesn't reject as an unhandled rejection after this test completes.
+    mockSaveCells.mockResolvedValue({ version_no: 2, changes: {} });
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-sheet-add-sheet-btn"]').trigger('click');
+    expect(wrapper.find('[data-testid="office-sheet-add-sheet-modal"]').exists()).toBe(true);
+
+    const input = wrapper.find('[data-testid="office-sheet-add-sheet-input"]')
+      .element as HTMLInputElement;
+    expect(input.value).toBe('Sheet2');
+
+    await wrapper.find('[data-testid="office-sheet-add-sheet-input"]').setValue('Q3 forecast');
+    await wrapper.find('[data-testid="office-sheet-add-sheet-confirm"]').trigger('click');
+    await flushPromises();
+
+    const tabLabels = wrapper.findAll('[data-testid="office-sheet-tab"]').map((tab) => tab.text());
+    expect(tabLabels).toContain('Q3 forecast');
+    expect(wrapper.find('[data-testid="office-sheet-add-sheet-modal"]').exists()).toBe(false);
+
+    await new Promise((resolve) => { setTimeout(resolve, 450); });
+    wrapper.unmount();
+  });
+
+  it('cancelling the add-sheet dialog adds no tab', async () => {
+    mockGetSheet.mockResolvedValue(sheetView());
+    const wrapper = mountEditor();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-sheet-add-sheet-btn"]').trigger('click');
+    await wrapper.find('[data-testid="office-sheet-add-sheet-cancel"]').trigger('click');
+
+    expect(wrapper.findAll('[data-testid="office-sheet-tab"]')).toHaveLength(1);
+    expect(wrapper.find('[data-testid="office-sheet-add-sheet-modal"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('the recalc button calls recalcAll and applies the returned deltas', async () => {
     mockGetSheet.mockResolvedValue(sheetView());
     mockRecalc.mockResolvedValue({ version_no: 2, changes: { 'Sheet1!A1': 100 } });

@@ -28,7 +28,15 @@ export const officePlugin: IPlugin = {
       path: '/dashboard/office',
       name: 'office-space',
       component: () => import('./src/views/SpaceHome.vue'),
-      meta: { requiresAuth: true, requiredUserPermission: OFFICE_USE_PERMISSION },
+      // `autoHideNav`: VBWD Office is an app-like surface, so the host layout
+      // collapses the dashboard nav to reclaim its 250px. UserLayout always
+      // renders a reveal toggle on these routes, so the rest of the dashboard
+      // stays reachable.
+      meta: {
+        requiresAuth: true,
+        requiredUserPermission: OFFICE_USE_PERMISSION,
+        autoHideNav: true,
+      },
     });
 
     // S147-2 — named shares addressed to the logged-in user.
@@ -36,7 +44,11 @@ export const officePlugin: IPlugin = {
       path: '/dashboard/office/shared-with-me',
       name: 'office-shared-with-me',
       component: () => import('./src/views/OfficeSharedWithMe.vue'),
-      meta: { requiresAuth: true, requiredUserPermission: OFFICE_USE_PERMISSION },
+      meta: {
+        requiresAuth: true,
+        requiredUserPermission: OFFICE_USE_PERMISSION,
+        autoHideNav: true,
+      },
     });
 
     // S147-2 — the public share view. OUTSIDE the authenticated shell on
@@ -57,7 +69,11 @@ export const officePlugin: IPlugin = {
       name: 'office-doc',
       component: () => import('./src/views/OfficeDocEditor.vue'),
       props: true,
-      meta: { requiresAuth: true, requiredUserPermission: OFFICE_USE_PERMISSION },
+      meta: {
+        requiresAuth: true,
+        requiredUserPermission: OFFICE_USE_PERMISSION,
+        autoHideNav: true,
+      },
     });
 
     // S147-4 — VBWD Spreadsheets: the virtualised grid, formula bar,
@@ -76,6 +92,7 @@ export const officePlugin: IPlugin = {
         requiresAuth: true,
         requiredUserPermission: OFFICE_USE_PERMISSION,
         fullHeight: true,
+        autoHideNav: true,
       },
     });
   },

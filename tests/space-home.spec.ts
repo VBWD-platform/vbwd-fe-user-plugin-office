@@ -271,3 +271,94 @@ describe('SpaceHome', () => {
     expect(wrapper.find('[data-testid="office-preview-pane"]').exists()).toBe(true);
   });
 });
+
+
+/**
+ * Coverage for the context-menu wiring: visibility is a SEPARATE flag from the
+ * target node, because `node: null` is a meaningful state (right-click on empty
+ * space offers Paste alone) and therefore cannot double as "closed". Getting that
+ * wrong either hides the empty-space menu or leaves a stale menu open.
+ */
+describe('SpaceHome — right-click context menu', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    mockGetUsage.mockResolvedValue({ bytes_used: 0, bytes_quota: 1024 });
+    mockListNodes.mockResolvedValue([documentNode, folderNode]);
+  });
+
+  it('right-clicking a row opens the menu targeting that node', async () => {
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.findAll('[data-testid="office-node-item"]')[0].trigger('contextmenu');
+    await flushPromises();
+
+    const menu = wrapper.find('[data-testid="office-context-menu"]');
+    expect(menu.exists()).toBe(true);
+    // A node-targeted menu offers the node actions, not just Paste.
+    expect(wrapper.find('[data-testid="office-context-copy"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="office-context-cut"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="office-context-delete"]').exists()).toBe(true);
+  });
+
+  it('right-clicking empty space offers Paste only, disabled while the clipboard is empty', async () => {
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-content"]').trigger('contextmenu');
+    await flushPromises();
+
+    const paste = wrapper.find('[data-testid="office-context-paste"]');
+    expect(paste.exists()).toBe(true);
+    expect(paste.attributes('disabled')).toBeDefined();
+    // No node actions on an empty-space menu.
+    expect(wrapper.find('[data-testid="office-context-copy"]').exists()).toBe(false);
+  });
+
+  it('enables Paste once something is on the clipboard', async () => {
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.findAll('[data-testid="office-node-item"]')[0].trigger('contextmenu');
+    await flushPromises();
+    await wrapper.find('[data-testid="office-context-copy"]').trigger('click');
+    await flushPromises();
+
+    await wrapper.find('[data-testid="office-content"]').trigger('contextmenu');
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="office-context-paste"]').attributes('disabled'),
+    ).toBeUndefined();
+  });
+
+  it('Delete asks for confirmation instead of purging straight away', async () => {
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.findAll('[data-testid="office-node-item"]')[0].trigger('contextmenu');
+    await flushPromises();
+    await wrapper.find('[data-testid="office-context-delete"]').trigger('click');
+    await flushPromises();
+
+    // The confirm dialog is the gate — a destructive action must never fire off a
+    // single menu click.
+    expect(wrapper.find('[data-testid="office-delete-modal"]').exists()).toBe(true);
+  });
+
+  it('cancelling the delete confirmation removes nothing', async () => {
+    const wrapper = mountSpaceHome();
+    await flushPromises();
+
+    await wrapper.findAll('[data-testid="office-node-item"]')[0].trigger('contextmenu');
+    await flushPromises();
+    await wrapper.find('[data-testid="office-context-delete"]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-testid="office-delete-cancel"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="office-delete-modal"]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-testid="office-node-item"]')).toHaveLength(2);
+  });
+});

@@ -60,15 +60,25 @@
       "open": "Open",
       "share": "Share",
       "rename": "Rename",
+      "copy": "Copy",
+      "cut": "Cut",
+      "paste": "Paste",
       "move": "Move",
       "download": "Download",
       "versions": "Versions",
-      "trash": "Move to trash"
+      "trash": "Move to trash",
+      "delete": "Delete immediately"
     },
     "rename": {
       "title": "Rename",
       "placeholder": "New name",
       "save": "Save",
+      "cancel": "Cancel"
+    },
+    "deleteConfirm": {
+      "title": "Delete immediately?",
+      "placeholder": "This cannot be undone. Click Delete to confirm.",
+      "confirm": "Delete forever",
       "cancel": "Cancel"
     },
     "versions": {
@@ -246,6 +256,12 @@
         "locked": "Another editor just took over this spreadsheet."
       },
       "reload": "Reload"
+    },
+    "delete": {
+      "title": "Delete permanently?",
+      "message": "“{name}” will be deleted permanently. This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
     }
   }
 }

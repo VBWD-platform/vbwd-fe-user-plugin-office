@@ -25,10 +25,16 @@ const NODE: OfficeNode = {
 
 const VIEWPORT_WIDTH = 1280;
 const VIEWPORT_HEIGHT = 720;
+const NOMINAL_MENU_WIDTH = 170;
+// Mirrors the component: item height x rendered items + vertical padding. A
+// DOCUMENT menu renders 9 items, which is what made a fixed 200px estimate
+// under-clamp once copy/cut/delete were added.
+const DOCUMENT_MENU_ITEMS = 9;
+const NOMINAL_MENU_HEIGHT = DOCUMENT_MENU_ITEMS * 34 + 16;
 
-function mountMenu(x: number, y: number) {
+function mountMenu(x: number, y: number, overrides: Record<string, unknown> = {}) {
   return mount(OfficeContextMenu, {
-    props: { node: NODE, x, y },
+    props: { node: NODE, x, y, canPaste: false, ...overrides },
     global: { mocks: { $t: (key: string) => key } },
   });
 }
@@ -55,7 +61,6 @@ describe('OfficeContextMenu — stays inside the viewport', () => {
 
   it('never renders below the bottom edge', () => {
     // The exact failure that broke the versions E2E.
-    const NOMINAL_MENU_HEIGHT = 200;
     const { top } = styleOf(mountMenu(400, 723));
 
     expect(top + NOMINAL_MENU_HEIGHT).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
@@ -65,7 +70,6 @@ describe('OfficeContextMenu — stays inside the viewport', () => {
   it('never renders past the right edge', () => {
     // The whole menu box must fit, not just its origin: a left of 1275 is
     // "inside" the viewport and still puts every button off-screen.
-    const NOMINAL_MENU_WIDTH = 170;
     const { left } = styleOf(mountMenu(1275, 300));
 
     expect(left + NOMINAL_MENU_WIDTH).toBeLessThanOrEqual(VIEWPORT_WIDTH);
@@ -75,8 +79,6 @@ describe('OfficeContextMenu — stays inside the viewport', () => {
   it('stays on screen even when the pointer is in the very corner', () => {
     const { top, left } = styleOf(mountMenu(VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
 
-    const NOMINAL_MENU_WIDTH = 170;
-    const NOMINAL_MENU_HEIGHT = 200;
     expect(top).toBeGreaterThanOrEqual(0);
     expect(top + NOMINAL_MENU_HEIGHT).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
     expect(left).toBeGreaterThanOrEqual(0);
@@ -86,8 +88,45 @@ describe('OfficeContextMenu — stays inside the viewport', () => {
   it('still shows every action for a document', () => {
     const wrapper = mountMenu(400, 300);
 
-    for (const action of ['download', 'share', 'rename', 'move', 'versions', 'trash']) {
+    for (const action of ['download', 'share', 'rename', 'copy', 'cut', 'move', 'versions', 'trash', 'delete']) {
       expect(wrapper.find(`[data-testid="office-context-${action}"]`).exists()).toBe(true);
     }
+  });
+
+  it('a node-context menu never offers Paste — that lives in the empty-space menu', () => {
+    const wrapper = mountMenu(400, 300);
+
+    expect(wrapper.find('[data-testid="office-context-paste"]').exists()).toBe(false);
+  });
+
+  it('emits the action name for copy/cut/delete like every other item', async () => {
+    const wrapper = mountMenu(400, 300);
+
+    await wrapper.find('[data-testid="office-context-copy"]').trigger('click');
+    expect(wrapper.emitted('action')?.[0]).toEqual(['copy']);
+
+    await wrapper.find('[data-testid="office-context-cut"]').trigger('click');
+    expect(wrapper.emitted('action')?.[1]).toEqual(['cut']);
+
+    await wrapper.find('[data-testid="office-context-delete"]').trigger('click');
+    expect(wrapper.emitted('action')?.[2]).toEqual(['delete']);
+  });
+
+  it('empty-space (no node) offers Paste only, disabled without a clipboard', () => {
+    const wrapper = mountMenu(400, 300, { node: null, canPaste: false });
+
+    expect(wrapper.find('[data-testid="office-context-paste"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="office-context-paste"]').attributes('disabled')).toBeDefined();
+    for (const action of ['download', 'share', 'rename', 'copy', 'cut', 'move', 'versions', 'trash', 'delete']) {
+      expect(wrapper.find(`[data-testid="office-context-${action}"]`).exists()).toBe(false);
+    }
+  });
+
+  it('empty-space Paste is enabled once the clipboard has an entry', async () => {
+    const wrapper = mountMenu(400, 300, { node: null, canPaste: true });
+
+    expect(wrapper.find('[data-testid="office-context-paste"]').attributes('disabled')).toBeUndefined();
+    await wrapper.find('[data-testid="office-context-paste"]').trigger('click');
+    expect(wrapper.emitted('action')?.[0]).toEqual(['paste']);
   });
 });

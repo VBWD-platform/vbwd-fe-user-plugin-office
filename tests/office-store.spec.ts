@@ -10,6 +10,7 @@ const mockTrashNode = vi.fn();
 const mockGetUsage = vi.fn();
 const mockListVersions = vi.fn();
 const mockRestoreVersion = vi.fn();
+const mockCopyNode = vi.fn();
 
 vi.mock('../src/api/officeApi', () => ({
   officeApi: {
@@ -18,6 +19,7 @@ vi.mock('../src/api/officeApi', () => ({
     uploadDocument: (...args: unknown[]) => mockUploadDocument(...args),
     renameNode: (...args: unknown[]) => mockRenameNode(...args),
     moveNode: (...args: unknown[]) => mockMoveNode(...args),
+    copyNode: (...args: unknown[]) => mockCopyNode(...args),
     trashNode: (...args: unknown[]) => mockTrashNode(...args),
     getUsage: (...args: unknown[]) => mockGetUsage(...args),
     listVersions: (...args: unknown[]) => mockListVersions(...args),
@@ -184,6 +186,61 @@ describe('useOfficeStore', () => {
 
     await store.restoreVersion(folderNode, 1);
     expect(mockRestoreVersion).toHaveBeenCalledWith('f1', 1);
+  });
+
+  it('has an empty clipboard by default and paste is a no-op', async () => {
+    const store = useOfficeStore();
+    expect(store.clipboard).toBeNull();
+
+    await store.pasteFromClipboard();
+
+    expect(mockMoveNode).not.toHaveBeenCalled();
+    expect(mockCopyNode).not.toHaveBeenCalled();
+  });
+
+  it('copyToClipboard then paste calls copyNode into the current folder and clears the clipboard', async () => {
+    mockCopyNode.mockResolvedValue({ ...folderNode, id: 'f1-copy' });
+    mockListNodes.mockResolvedValue([]);
+    mockGetUsage.mockResolvedValue({ bytes_used: 0, bytes_quota: 1000 });
+    const store = useOfficeStore();
+    await store.openFolder({ ...folderNode, id: 'target' });
+
+    store.copyToClipboard(folderNode);
+    expect(store.clipboard).toEqual({ mode: 'copy', nodeId: 'f1' });
+
+    await store.pasteFromClipboard();
+
+    expect(mockCopyNode).toHaveBeenCalledWith('f1', 'target');
+    expect(mockMoveNode).not.toHaveBeenCalled();
+    expect(store.clipboard).toBeNull();
+  });
+
+  it('cutToClipboard then paste MOVES the node into the current folder', async () => {
+    mockMoveNode.mockResolvedValue(folderNode);
+    mockListNodes.mockResolvedValue([]);
+    mockGetUsage.mockResolvedValue({ bytes_used: 0, bytes_quota: 1000 });
+    const store = useOfficeStore();
+    await store.openFolder({ ...folderNode, id: 'target' });
+
+    store.cutToClipboard(folderNode);
+    expect(store.clipboard).toEqual({ mode: 'cut', nodeId: 'f1' });
+
+    await store.pasteFromClipboard();
+
+    expect(mockMoveNode).toHaveBeenCalledWith('f1', 'target');
+    expect(mockCopyNode).not.toHaveBeenCalled();
+    expect(store.clipboard).toBeNull();
+  });
+
+  it('a failed paste surfaces the error and keeps the clipboard intact for a retry', async () => {
+    mockCopyNode.mockRejectedValue(new Error('POST failed: 413'));
+    const store = useOfficeStore();
+    store.copyToClipboard(folderNode);
+
+    await store.pasteFromClipboard();
+
+    expect(store.error).toBe('POST failed: 413');
+    expect(store.clipboard).toEqual({ mode: 'copy', nodeId: 'f1' });
   });
 
   it('toggleViewMode flips between list and grid', () => {

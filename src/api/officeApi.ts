@@ -12,6 +12,7 @@
 //   GET    /api/v1/office/documents/<id>/versions       — history
 //   POST   /api/v1/office/documents/<id>/restore        — restore a version
 //   PATCH  /api/v1/office/nodes/<id>                    — rename / move
+//   POST   /api/v1/office/nodes/<id>/copy                — duplicate (recursive for folders)
 //   DELETE /api/v1/office/nodes/<id>                    — trash (?purge=true to purge)
 //   GET    /api/v1/office/usage                         — {bytes_used, bytes_quota}
 //   GET    /api/v1/office/nodes/<id>/shares             — list shares on a node
@@ -281,6 +282,14 @@ export const officeApi = {
 
   moveNode(nodeId: string, parentId: string | null): Promise<OfficeNode> {
     return sendJson(`${API}/nodes/${nodeId}`, 'PATCH', { parent_id: parentId });
+  },
+
+  /** Duplicate a node into `parentId` (Finder-style copy/paste). A folder
+   * copy is recursive server-side; a document copy is a byte-identical new
+   * version-1 through `OfficeDocumentService`. Name collisions in the
+   * destination get a " copy" / " copy 2" suffix from the backend. */
+  copyNode(nodeId: string, parentId: string | null): Promise<OfficeNode> {
+    return sendJson(`${API}/nodes/${nodeId}/copy`, 'POST', { parent_id: parentId });
   },
 
   async trashNode(nodeId: string, purge = false): Promise<void> {

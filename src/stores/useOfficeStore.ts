@@ -12,6 +12,13 @@ export interface OfficeBreadcrumbEntry {
   name: string;
 }
 
+export type OfficeClipboardMode = 'copy' | 'cut';
+
+export interface OfficeClipboardEntry {
+  mode: OfficeClipboardMode;
+  nodeId: string;
+}
+
 export type OfficeUploadStatus = 'uploading' | 'done' | 'error';
 
 export interface OfficeUploadItem {
@@ -35,6 +42,7 @@ export const useOfficeStore = defineStore('office', () => {
   const uploads = ref<OfficeUploadItem[]>([]);
   const selectedNode = ref<OfficeNode | null>(null);
   const versions = ref<OfficeVersion[]>([]);
+  const clipboard = ref<OfficeClipboardEntry | null>(null);
 
   async function fetchNodes(parentId: string | null = currentParentId.value): Promise<void> {
     loading.value = true;
@@ -148,6 +156,39 @@ export const useOfficeStore = defineStore('office', () => {
     await fetchNodes();
   }
 
+  /** Finder vocabulary: Copy stages a node for a later Paste that DUPLICATES
+   * it (backend `POST /nodes/<id>/copy`); Cut stages one for a later Paste
+   * that MOVES it (the same PATCH the move dialog and drag-and-drop use).
+   * Staging either replaces whatever was previously on the clipboard. */
+  function copyToClipboard(node: OfficeNode): void {
+    clipboard.value = { mode: 'copy', nodeId: node.id };
+  }
+
+  function cutToClipboard(node: OfficeNode): void {
+    clipboard.value = { mode: 'cut', nodeId: node.id };
+  }
+
+  /** Paste into the CURRENT folder. A no-op when the clipboard is empty. A
+   * folder-into-its-own-descendant refusal (and any other server-side
+   * rejection) surfaces on `error` and leaves the clipboard intact so the
+   * user can navigate elsewhere and retry the same paste. */
+  async function pasteFromClipboard(): Promise<void> {
+    const entry = clipboard.value;
+    if (!entry) return;
+    try {
+      if (entry.mode === 'cut') {
+        await officeApi.moveNode(entry.nodeId, currentParentId.value);
+      } else {
+        await officeApi.copyNode(entry.nodeId, currentParentId.value);
+      }
+      clipboard.value = null;
+      await fetchNodes();
+      await fetchUsage();
+    } catch (caught) {
+      error.value = (caught as Error).message;
+    }
+  }
+
   async function trashNode(node: OfficeNode, purge = false): Promise<void> {
     await officeApi.trashNode(node.id, purge);
     await fetchNodes();
@@ -185,6 +226,7 @@ export const useOfficeStore = defineStore('office', () => {
     uploads,
     selectedNode,
     versions,
+    clipboard,
     fetchNodes,
     fetchUsage,
     openFolder,
@@ -195,6 +237,9 @@ export const useOfficeStore = defineStore('office', () => {
     dismissUpload,
     renameNode,
     moveNode,
+    copyToClipboard,
+    cutToClipboard,
+    pasteFromClipboard,
     trashNode,
     fetchVersions,
     restoreVersion,

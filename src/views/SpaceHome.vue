@@ -104,7 +104,8 @@
         class="office-content"
         :class="{ 'is-drag-active': isDragActive }"
         data-testid="office-content"
-        @click="contextMenuNode = null"
+        @click="closeContextMenu"
+        @contextmenu.prevent="onEmptySpaceMenu"
         @dragover.prevent="isDragActive = true"
         @dragleave.prevent="isDragActive = false"
         @drop.prevent="onDrop"
@@ -177,8 +178,9 @@
             class="office-node-row"
             data-testid="office-node-item"
             @click.stop="onNodeClick(node)"
+            @contextmenu.prevent.stop="onNodeMenu(node, $event)"
           >
-            <Icon :name="node.kind === 'folder' ? 'layers' : 'document'" />
+            <Icon :name="fileTypeIcon(node)" />
             <span
               class="office-node-name"
               data-testid="office-node-name"
@@ -210,9 +212,10 @@
             class="office-node-tile"
             data-testid="office-node-item"
             @click.stop="onNodeClick(node)"
+            @contextmenu.prevent.stop="onNodeMenu(node, $event)"
           >
             <Icon
-              :name="node.kind === 'folder' ? 'layers' : 'document'"
+              :name="fileTypeIcon(node)"
               :size="32"
             />
             <span
@@ -232,13 +235,25 @@
       </div>
 
       <OfficeContextMenu
-        v-if="contextMenuNode"
+        v-if="contextMenuOpen"
         :node="contextMenuNode"
         :x="contextMenuX"
         :y="contextMenuY"
+        :can-paste="!!store.clipboard"
         @action="onContextAction"
       />
     </main>
+
+    <OfficeConfirmDialog
+      v-if="deletingNode"
+      :title="$t('office.delete.title')"
+      :message="$t('office.delete.message', { name: deletingNode.name })"
+      :confirm-label="$t('office.delete.confirm')"
+      :cancel-label="$t('office.delete.cancel')"
+      testid-prefix="office-delete"
+      @confirm="onConfirmDelete"
+      @cancel="deletingNode = null"
+    />
 
     <OfficePreviewPane
       v-if="previewNode"
@@ -327,6 +342,8 @@ import { officeApi, officeDocApi, officeSheetApi, type OfficeNode } from '../api
 import { useOfficeStore } from '../stores/useOfficeStore';
 import OfficeBreadcrumb from '../components/OfficeBreadcrumb.vue';
 import OfficeFolderTree from '../components/OfficeFolderTree.vue';
+import { fileTypeIcon } from '../utils/fileTypeIcon';
+import OfficeConfirmDialog from '../components/OfficeConfirmDialog.vue';
 import OfficeContextMenu, { type OfficeContextMenuAction } from '../components/OfficeContextMenu.vue';
 import OfficeUsageBar from '../components/OfficeUsageBar.vue';
 import OfficePreviewPane from '../components/OfficePreviewPane.vue';
@@ -345,6 +362,11 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const previewNode = ref<OfficeNode | null>(null);
 const contextMenuNode = ref<OfficeNode | null>(null);
+// Visibility is its own flag: a null `contextMenuNode` is a MEANINGFUL state
+// (right-click on empty space -> Paste only), so it cannot double as "closed".
+const contextMenuOpen = ref(false);
+// Permanent delete is confirmed, never fired straight off a menu click.
+const deletingNode = ref<OfficeNode | null>(null);
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 
@@ -447,11 +469,41 @@ function onNodeMenu(node: OfficeNode, event: MouseEvent): void {
   contextMenuNode.value = node;
   contextMenuX.value = event.clientX;
   contextMenuY.value = event.clientY;
+  contextMenuOpen.value = true;
+}
+
+/** Right-click on empty space: the menu targets the CURRENT folder, so it offers
+ *  Paste alone. Deliberately not "whatever row happened to be under the cursor". */
+function onEmptySpaceMenu(event: MouseEvent): void {
+  contextMenuNode.value = null;
+  contextMenuX.value = event.clientX;
+  contextMenuY.value = event.clientY;
+  contextMenuOpen.value = true;
+}
+
+/** Permanent removal (purge), not a trash. Confirmed by the dialog above. */
+async function onConfirmDelete(): Promise<void> {
+  const node = deletingNode.value;
+  deletingNode.value = null;
+  if (!node) return;
+  await store.trashNode(node, true);
+  if (previewNode.value?.id === node.id) previewNode.value = null;
+}
+
+function closeContextMenu(): void {
+  contextMenuOpen.value = false;
+  contextMenuNode.value = null;
 }
 
 async function onContextAction(action: OfficeContextMenuAction): Promise<void> {
   const node = contextMenuNode.value;
-  contextMenuNode.value = null;
+  closeContextMenu();
+
+  // Paste is the only action that is meaningful without a target node.
+  if (action === 'paste') {
+    await store.pasteFromClipboard();
+    return;
+  }
   if (!node) return;
 
   switch (action) {
@@ -474,6 +526,15 @@ async function onContextAction(action: OfficeContextMenuAction): Promise<void> {
     case 'trash':
       await store.trashNode(node);
       if (previewNode.value?.id === node.id) previewNode.value = null;
+      break;
+    case 'copy':
+      store.copyToClipboard(node);
+      break;
+    case 'cut':
+      store.cutToClipboard(node);
+      break;
+    case 'delete':
+      deletingNode.value = node;
       break;
   }
 }

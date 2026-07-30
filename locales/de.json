@@ -60,15 +60,25 @@
       "open": "Öffnen",
       "share": "Teilen",
       "rename": "Umbenennen",
+      "copy": "Kopieren",
+      "cut": "Ausschneiden",
+      "paste": "Einfügen",
       "move": "Verschieben",
       "download": "Herunterladen",
       "versions": "Versionen",
-      "trash": "In den Papierkorb"
+      "trash": "In den Papierkorb",
+      "delete": "Sofort löschen"
     },
     "rename": {
       "title": "Umbenennen",
       "placeholder": "Neuer Name",
       "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "deleteConfirm": {
+      "title": "Sofort löschen?",
+      "placeholder": "Dies kann nicht rückgängig gemacht werden. Zum Bestätigen auf Löschen klicken.",
+      "confirm": "Endgültig löschen",
       "cancel": "Abbrechen"
     },
     "versions": {
@@ -246,6 +256,12 @@
         "locked": "Ein anderer Bearbeiter hat diese Tabelle gerade übernommen."
       },
       "reload": "Neu laden"
+    },
+    "delete": {
+      "title": "Endgültig löschen?",
+      "message": "„{name}“ wird endgültig gelöscht. Dies kann nicht widerrufen werden.",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
     }
   }
 }
